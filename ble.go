@@ -47,16 +47,16 @@ func managedObjects() (objects, error) {
 	return &objs, err
 }
 
-type Properties map[string]dbus.Variant
+type properties map[string]dbus.Variant
 
 type Blob struct {
-	Path       dbus.ObjectPath
-	Properties Properties
-	Object     dbus.BusObject
-	Interface  string
+	path       dbus.ObjectPath
+	properties properties
+	object     dbus.BusObject
+	iface      string
 }
 
-func GetObject(
+func getBlob(
 	path dbus.ObjectPath,
 	info map[string]map[string]dbus.Variant,
 	iface string,
@@ -66,10 +66,10 @@ func GetObject(
 		return nil
 	}
 	return &Blob{
-		Path:       path,
-		Properties: props,
-		Object:     bus.Object("org.bluez", path),
-		Interface:  iface,
+		path:       path,
+		properties: props,
+		object:     bus.Object("org.bluez", path),
+		iface:      iface,
 	}
 }
 
@@ -78,23 +78,23 @@ func notFound(iface string) error {
 }
 
 func (obj *Blob) call(method string, args ...interface{}) error {
-	return obj.Object.Call(dot(obj.Interface, method), 0, args...).Err
+	return obj.object.Call(dot(obj.iface, method), 0, args...).Err
 }
 
 func (obj *Blob) Print() {
-	fmt.Printf("%s [%s]\n", obj.Path, obj.Interface)
-	for key, val := range obj.Properties {
+	fmt.Printf("%s [%s]\n", obj.path, obj.iface)
+	for key, val := range obj.properties {
 		fmt.Println("   ", key, val.String())
 	}
 }
 
-func GetAdapter() (*Blob, error) {
+func Adapter() (*Blob, error) {
 	objects, err := managedObjects()
 	if err != nil {
 		return nil, err
 	}
 	for path, info := range *objects {
-		obj := GetObject(path, info, adapterInterface)
+		obj := getBlob(path, info, adapterInterface)
 		if obj != nil {
 			return obj, nil
 		}
@@ -184,7 +184,7 @@ func getDevice(signal *dbus.Signal) (*Blob, error) {
 	if err != nil {
 		return nil, err
 	}
-	obj := GetObject(path, info, deviceInterface)
+	obj := getBlob(path, info, deviceInterface)
 	if obj == nil {
 		return nil, notFound(deviceInterface)
 	}

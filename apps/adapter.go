@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	adapter, err := ble.GetAdapter()
+	adapter, err := ble.Adapter()
 	if err != nil {
 		log.Fatal(err)
 	}
