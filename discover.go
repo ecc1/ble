@@ -54,7 +54,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (Device, error) {
 	device, err := cache.GetDevice(uuids...)
 	if err == nil {
-		log.Printf("device %s already discovered\n", device.Name())
+		log.Printf("%s already discovered\n", device.Name())
 		return device, nil
 	}
 	adapter, err := cache.GetAdapter()
@@ -65,7 +65,7 @@ func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (Devi
 	if err != nil {
 		return nil, err
 	}
-	err = cache.update()
+	err = cache.Update()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -2,8 +2,6 @@ package ble
 
 import (
 	"log"
-
-	"github.com/godbus/dbus"
 )
 
 const (
@@ -14,18 +12,18 @@ const (
 type Device interface {
 	base
 
+	UUIDs() []string
+	Connected() bool
+	Paired() bool
+
 	Connect() error
 	Pair() error
 }
 
 func (cache *ObjectCache) GetDevice(uuids ...string) (Device, error) {
-	return cache.find(deviceInterface, func(path dbus.ObjectPath, props properties) bool {
+	return cache.find(deviceInterface, func(device *blob) bool {
 		if uuids != nil {
-			v := props["UUIDs"].Value()
-			advertised, ok := v.([]string)
-			if !ok {
-				log.Fatalln("unexpected UUIDs property:", v)
-			}
+			advertised := device.UUIDs()
 			for _, u := range uuids {
 				if !validUUID(u) {
 					log.Fatalln("invalid UUID", u)
@@ -39,13 +37,25 @@ func (cache *ObjectCache) GetDevice(uuids ...string) (Device, error) {
 	})
 }
 
+func (device *blob) UUIDs() []string {
+	return device.properties["UUIDs"].Value().([]string)
+}
+
+func (device *blob) Connected() bool {
+	return device.properties["Connected"].Value().(bool)
+}
+
+func (device *blob) Paired() bool {
+	return device.properties["Paired"].Value().(bool)
+}
+
 func (device *blob) Connect() error {
-	log.Println("connect")
+	log.Printf("%s: connecting\n", device.Name())
 	return device.call("Connect")
 }
 
 func (device *blob) Pair() error {
-	log.Println("pair")
+	log.Printf("%s: pairing\n", device.Name())
 	return device.call("Pair")
 }
 

@@ -34,15 +34,15 @@ func ManagedObjects() (*ObjectCache, error) {
 		dot(objectManager, "GetManagedObjects"),
 		0,
 	)
-	if call.Err != nil {
-		return nil, call.Err
-	}
 	var objs ObjectCache
 	err := call.Store(&objs.objects)
-	return &objs, err
+	if err != nil {
+		return nil, err
+	}
+	return &objs, nil
 }
 
-func (cache *ObjectCache) update() error {
+func (cache *ObjectCache) Update() error {
 	updated, err := ManagedObjects()
 	if err != nil {
 		return err
@@ -113,8 +113,12 @@ func (obj *blob) Name() string {
 	}
 }
 
+func (obj *blob) callv(method string, args ...interface{}) *dbus.Call {
+	return obj.object.Call(dot(obj.iface, method), 0, args...)
+}
+
 func (obj *blob) call(method string, args ...interface{}) error {
-	return obj.object.Call(dot(obj.iface, method), 0, args...).Err
+	return obj.callv(method, args...).Err
 }
 
 func (obj *blob) Print() {
@@ -133,19 +137,14 @@ func printProperties(iface string, props properties) {
 	}
 }
 
-type predicate func(dbus.ObjectPath, properties) bool
+type predicate func(*blob) bool
 
-func (cache *ObjectCache) collect(iface string, tests ...predicate) []*blob {
+func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) {
 	var objects []*blob
 	cache.iter(func(path dbus.ObjectPath, dict propertiesDict) bool {
 		props := (*dict)[iface]
 		if props == nil {
 			return false
-		}
-		for _, test := range tests {
-			if !test(path, props) {
-				return false
-			}
 		}
 		obj := &blob{
 			path:       path,
@@ -153,14 +152,14 @@ func (cache *ObjectCache) collect(iface string, tests ...predicate) []*blob {
 			properties: props,
 			object:     bus.Object("org.bluez", path),
 		}
+		for _, test := range tests {
+			if !test(obj) {
+				return false
+			}
+		}
 		objects = append(objects, obj)
 		return false
 	})
-	return objects
-}
-
-func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) {
-	objects := cache.collect(iface, tests...)
 	switch len(objects) {
 	case 1:
 		return objects[0], nil
