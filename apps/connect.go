@@ -2,20 +2,25 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/ecc1/ble"
 )
+
+const dexcomUUID = "f0aca0b1-ebfa-f96f-28da-076c35a521db"
 
 func main() {
 	objects, err := ble.ManagedObjects()
 	if err != nil {
 		log.Fatal(err)
 	}
-	uuids := os.Args[1:]
-	device, err := objects.Discover(0, uuids...)
+
+	device, err := objects.Discover(0, dexcomUUID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	device.Print()
+
+	err = device.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

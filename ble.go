@@ -26,15 +26,15 @@ func init() {
 	}
 }
 
-func dot(a, b string) string {
-	return a + "." + b
+type ObjectCache struct {
+	// It would be nice to factor out the subtypes here,
+	// but then the reflection used by Store() wouldn't work.
+	objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
 }
-
-type objects *map[dbus.ObjectPath]map[string]map[string]dbus.Variant
 
 // Get all objects and properties.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
-func managedObjects() (objects, error) {
+func ManagedObjects() (*ObjectCache, error) {
 	call := bus.Object("org.bluez", "/").Call(
 		dot(objectManager, "GetManagedObjects"),
 		0,
@@ -42,69 +42,107 @@ func managedObjects() (objects, error) {
 	if call.Err != nil {
 		return nil, call.Err
 	}
-	var objs map[dbus.ObjectPath]map[string]map[string]dbus.Variant
-	err := call.Store(&objs)
+	var objs ObjectCache
+	err := call.Store(&objs.objects)
 	return &objs, err
+}
+
+type propertiesDict *map[string]map[string]dbus.Variant
+
+// A function of type objectProc is applied to each managed object.
+// It should return true if the iteration should stop,
+// false if it should continue.
+type objectProc func(dbus.ObjectPath, propertiesDict) bool
+
+func (cache *ObjectCache) iter(proc objectProc) {
+	for path, dict := range cache.objects {
+		if proc(path, &dict) {
+			return
+		}
+	}
+}
+
+func (cache *ObjectCache) Print() {
+	cache.iter(func(path dbus.ObjectPath, dict propertiesDict) bool {
+		fmt.Println(path)
+		for iface, props := range *dict {
+			fmt.Println("   ", iface)
+			for p, v := range props {
+				fmt.Println("       ", p, v.String())
+			}
+		}
+		return false
+	})
 }
 
 type properties map[string]dbus.Variant
 
-type Blob struct {
-	path       dbus.ObjectPath
+type blob struct {
+	Path       dbus.ObjectPath
+	Interface  string
 	properties properties
 	object     dbus.BusObject
-	iface      string
 }
 
-func getBlob(
-	path dbus.ObjectPath,
-	info map[string]map[string]dbus.Variant,
-	iface string,
-) *Blob {
-	props := info[iface]
-	if props == nil {
-		return nil
-	}
-	return &Blob{
-		path:       path,
-		properties: props,
-		object:     bus.Object("org.bluez", path),
-		iface:      iface,
-	}
+func (obj *blob) call(method string, args ...interface{}) error {
+	return obj.object.Call(dot(obj.Interface, method), 0, args...).Err
 }
 
-func notFound(iface string) error {
-	return fmt.Errorf("interface %s not found", iface)
-}
-
-func (obj *Blob) call(method string, args ...interface{}) error {
-	return obj.object.Call(dot(obj.iface, method), 0, args...).Err
-}
-
-func (obj *Blob) Print() {
-	fmt.Printf("%s [%s]\n", obj.path, obj.iface)
+func (obj *blob) print() {
+	fmt.Printf("%s [%s]\n", obj.Path, obj.Interface)
 	for key, val := range obj.properties {
 		fmt.Println("   ", key, val.String())
 	}
 }
 
-func Adapter() (*Blob, error) {
-	objects, err := managedObjects()
-	if err != nil {
-		return nil, err
-	}
-	for path, info := range *objects {
-		obj := getBlob(path, info, adapterInterface)
-		if obj != nil {
-			return obj, nil
+type blobPredicate func(dbus.ObjectPath, properties) bool
+
+func (cache *ObjectCache) find(iface string, tests ...blobPredicate) (*blob, error) {
+	var objects []*blob
+	cache.iter(func(path dbus.ObjectPath, dict propertiesDict) bool {
+		props := (*dict)[iface]
+		if props == nil {
+			return false
 		}
+		for _, test := range tests {
+			if !test(path, props) {
+				return false
+			}
+		}
+		obj := &blob{
+			Path:       path,
+			Interface:  iface,
+			properties: props,
+			object:     bus.Object("org.bluez", path),
+		}
+		objects = append(objects, obj)
+		return false
+	})
+	switch len(objects) {
+	case 1:
+		return objects[0], nil
+	case 0:
+		return nil, fmt.Errorf("interface %s not found", iface)
+	default:
+		log.Printf("WARNING: found %d instances of interface %s\n", len(objects), iface)
+		return objects[0], nil
 	}
-	return nil, notFound(adapterInterface)
 }
 
-func (obj *Blob) SetDiscoveryFilter(uuids ...string) error {
-	log.Println("Setting discovery filter", uuids)
-	return obj.call(
+type Adapter blob
+
+func (adapter *Adapter) Print() {
+	(*blob)(adapter).print()
+}
+
+func (cache *ObjectCache) GetAdapter() (*Adapter, error) {
+	p, err := cache.find(adapterInterface)
+	return (*Adapter)(p), err
+}
+
+func (adapter *Adapter) SetDiscoveryFilter(uuids ...string) error {
+	log.Println("setting discovery filter", uuids)
+	return (*blob)(adapter).call(
 		"SetDiscoveryFilter",
 		map[string]dbus.Variant{
 			"Transport": dbus.MakeVariant("le"),
@@ -113,22 +151,45 @@ func (obj *Blob) SetDiscoveryFilter(uuids ...string) error {
 	)
 }
 
-func (obj *Blob) StartDiscovery() error {
-	log.Println("Starting discovery")
-	return obj.call("StartDiscovery")
+func (adapter *Adapter) StartDiscovery() error {
+	log.Println("starting discovery")
+	return (*blob)(adapter).call("StartDiscovery")
 }
 
-func (obj *Blob) StopDiscovery() error {
-	log.Println("Stopping discovery")
-	return obj.call("StopDiscovery")
+func (adapter *Adapter) StopDiscovery() error {
+	log.Println("stopping discovery")
+	return (*blob)(adapter).call("StopDiscovery")
 }
 
-// A function of type DeviceHandler is called when a device is
-// discovered. It should return true if discovery should stop,
-// false if it should continue.
-type DeviceHandler func(*Blob) bool
+type Device blob
 
-func (obj *Blob) Discover(handler DeviceHandler, timeout time.Duration) error {
+func (device *Device) Print() {
+	(*blob)(device).print()
+}
+
+func (cache *ObjectCache) GetDevice(uuids ...string) (*Device, error) {
+	p, err := cache.find(deviceInterface, func(path dbus.ObjectPath, props properties) bool {
+		if uuids != nil {
+			v := props["UUIDs"].Value()
+			advertised, ok := v.([]string)
+			if !ok {
+				log.Fatalln("unexpected UUIDs property:", v)
+			}
+			for _, u := range uuids {
+				if !validUUID(u) {
+					log.Fatalln("invalid UUID", u)
+				}
+				if !stringArrayContains(advertised, u) {
+					return false
+				}
+			}
+		}
+		return true
+	})
+	return (*Device)(p), err
+}
+
+func (adapter *Adapter) Discover(timeout time.Duration, uuids ...string) error {
 	signals := make(chan *dbus.Signal)
 	bus.Signal(signals)
 	err := bus.BusObject().Call(
@@ -139,11 +200,15 @@ func (obj *Blob) Discover(handler DeviceHandler, timeout time.Duration) error {
 	if err != nil {
 		return err
 	}
-	err = obj.StartDiscovery()
+	err = adapter.SetDiscoveryFilter(uuids...)
 	if err != nil {
 		return err
 	}
-	defer obj.StopDiscovery()
+	err = adapter.StartDiscovery()
+	if err != nil {
+		return err
+	}
+	defer adapter.StopDiscovery()
 	var t <-chan time.Time
 	if timeout != 0 {
 		t = time.After(timeout)
@@ -153,40 +218,64 @@ func (obj *Blob) Discover(handler DeviceHandler, timeout time.Duration) error {
 		case s := <-signals:
 			switch s.Name {
 			case interfacesAdded:
-				log.Println("Handling", s.Name)
-				obj, err := getDevice(s)
-				if err != nil {
-					return err
-				}
-				if handler(obj) {
-					close(signals)
-					log.Println("Discovery finished")
-					return nil
-				}
+				log.Println("received signal", s.Name)
+				bus.RemoveSignal(signals)
+				close(signals)
+				log.Println("discovery finished")
+				return nil
 			default:
-				log.Println("Unexpected signal", s.Name)
+				log.Println("unexpected signal", s.Name)
 				log.Println(s.Body)
 			}
 		case <-t:
-			log.Println("Discovery timeout")
 			return fmt.Errorf("discovery timeout")
 		}
 	}
 	return nil
 }
 
-// Extract the object from the InterfacesAdded signal.
-// See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
-func getDevice(signal *dbus.Signal) (*Blob, error) {
-	var path dbus.ObjectPath
-	var info map[string]map[string]dbus.Variant
-	err := dbus.Store(signal.Body, &path, &info)
+func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (*Device, error) {
+	device, err := cache.GetDevice(uuids...)
+	if err == nil {
+		log.Printf("device %s already discovered\n", device.Path)
+		return device, nil
+	}
+	adapter, err := cache.GetAdapter()
 	if err != nil {
 		return nil, err
 	}
-	obj := getBlob(path, info, deviceInterface)
-	if obj == nil {
-		return nil, notFound(deviceInterface)
+	err = adapter.Discover(timeout, uuids...)
+	if err != nil {
+		return nil, err
 	}
-	return obj, nil
+	// update object cache
+	updated, err := ManagedObjects()
+	if err != nil {
+		log.Fatal(err)
+	}
+	cache.objects = updated.objects
+	return cache.GetDevice(uuids...)
+}
+
+func (device *Device) Connect() error {
+	log.Println("connect")
+	return (*blob)(device).call("Connect")
+}
+
+func (device *Device) Pair() error {
+	log.Println("pair")
+	return (*blob)(device).call("Pair")
+}
+
+func dot(a, b string) string {
+	return a + "." + b
+}
+
+func stringArrayContains(a []string, str string) bool {
+	for _, s := range a {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }

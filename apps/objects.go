@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/ecc1/ble"
 )
@@ -12,10 +11,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	uuids := os.Args[1:]
-	device, err := objects.Discover(0, uuids...)
-	if err != nil {
-		log.Fatal(err)
-	}
-	device.Print()
+	objects.Print()
 }

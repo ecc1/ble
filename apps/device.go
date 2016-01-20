@@ -13,7 +13,7 @@ func main() {
 		log.Fatal(err)
 	}
 	uuids := os.Args[1:]
-	device, err := objects.Discover(0, uuids...)
+	device, err := objects.GetDevice(uuids...)
 	if err != nil {
 		log.Fatal(err)
 	}
