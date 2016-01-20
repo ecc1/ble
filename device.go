@@ -11,18 +11,15 @@ const (
 	interfacesAdded = "org.freedesktop.DBus.ObjectManager.InterfacesAdded"
 )
 
-type Device blob
+type Device interface {
+	base
 
-func (device *Device) blob() *blob {
-	return (*blob)(device)
+	Connect() error
+	Pair() error
 }
 
-func (device *Device) Print() {
-	device.blob().print()
-}
-
-func (cache *ObjectCache) GetDevice(uuids ...string) (*Device, error) {
-	p, err := cache.find(deviceInterface, func(path dbus.ObjectPath, props properties) bool {
+func (cache *ObjectCache) GetDevice(uuids ...string) (Device, error) {
+	return cache.find(deviceInterface, func(path dbus.ObjectPath, props properties) bool {
 		if uuids != nil {
 			v := props["UUIDs"].Value()
 			advertised, ok := v.([]string)
@@ -40,17 +37,16 @@ func (cache *ObjectCache) GetDevice(uuids ...string) (*Device, error) {
 		}
 		return true
 	})
-	return (*Device)(p), err
 }
 
-func (device *Device) Connect() error {
+func (device *blob) Connect() error {
 	log.Println("connect")
-	return device.blob().call("Connect")
+	return device.call("Connect")
 }
 
-func (device *Device) Pair() error {
+func (device *blob) Pair() error {
 	log.Println("pair")
-	return device.blob().call("Pair")
+	return device.call("Pair")
 }
 
 func stringArrayContains(a []string, str string) bool {

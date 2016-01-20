@@ -8,7 +8,7 @@ import (
 	"github.com/godbus/dbus"
 )
 
-func (adapter *Adapter) Discover(timeout time.Duration, uuids ...string) error {
+func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	signals := make(chan *dbus.Signal)
 	defer close(signals)
 	bus.Signal(signals)
@@ -39,10 +39,10 @@ func (adapter *Adapter) Discover(timeout time.Duration, uuids ...string) error {
 		case s := <-signals:
 			switch s.Name {
 			case interfacesAdded:
-				log.Println("discovery finished")
+				log.Printf("%s: discovery finished\n", adapter.Name())
 				return nil
 			default:
-				log.Println("unexpected signal", s.Name)
+				log.Printf("%s: unexpected signal %s\n", adapter.Name(), s.Name)
 			}
 		case <-t:
 			return fmt.Errorf("discovery timeout")
@@ -51,10 +51,10 @@ func (adapter *Adapter) Discover(timeout time.Duration, uuids ...string) error {
 	return nil
 }
 
-func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (*Device, error) {
+func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (Device, error) {
 	device, err := cache.GetDevice(uuids...)
 	if err == nil {
-		log.Printf("device %s already discovered\n", device.Path)
+		log.Printf("device %s already discovered\n", device.Name())
 		return device, nil
 	}
 	adapter, err := cache.GetAdapter()
@@ -65,11 +65,9 @@ func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (*Dev
 	if err != nil {
 		return nil, err
 	}
-	// update object cache
-	updated, err := ManagedObjects()
+	err = cache.update()
 	if err != nil {
 		log.Fatal(err)
 	}
-	cache.objects = updated.objects
 	return cache.GetDevice(uuids...)
 }

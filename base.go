@@ -42,6 +42,15 @@ func ManagedObjects() (*ObjectCache, error) {
 	return &objs, err
 }
 
+func (cache *ObjectCache) update() error {
+	updated, err := ManagedObjects()
+	if err != nil {
+		return err
+	}
+	cache.objects = updated.objects
+	return nil
+}
+
 type propertiesDict *map[string]map[string]dbus.Variant
 
 // A function of type objectProc is applied to each managed object.
@@ -58,41 +67,75 @@ func (cache *ObjectCache) iter(proc objectProc) {
 }
 
 func (cache *ObjectCache) Print() {
-	cache.iter(func(path dbus.ObjectPath, dict propertiesDict) bool {
-		fmt.Println(path)
-		for iface, props := range *dict {
-			fmt.Println("   ", iface)
-			for p, v := range props {
-				fmt.Println("       ", p, v.String())
-			}
-		}
-		return false
-	})
+	cache.iter(printObject)
+}
+
+func printObject(path dbus.ObjectPath, dict propertiesDict) bool {
+	fmt.Println(path)
+	for iface, props := range *dict {
+		printProperties(iface, props)
+	}
+	fmt.Println()
+	return false
+}
+
+type base interface {
+	Path() dbus.ObjectPath
+	Interface() string
+	Name() string
+	Print()
 }
 
 type properties map[string]dbus.Variant
 
 type blob struct {
-	Path       dbus.ObjectPath
-	Interface  string
+	path       dbus.ObjectPath
+	iface      string
 	properties properties
 	object     dbus.BusObject
 }
 
-func (obj *blob) call(method string, args ...interface{}) error {
-	return obj.object.Call(dot(obj.Interface, method), 0, args...).Err
+func (obj *blob) Path() dbus.ObjectPath {
+	return obj.path
 }
 
-func (obj *blob) print() {
-	fmt.Printf("%s [%s]\n", obj.Path, obj.Interface)
-	for key, val := range obj.properties {
-		fmt.Println("   ", key, val.String())
+func (obj *blob) Interface() string {
+	return obj.iface
+}
+
+func (obj *blob) Name() string {
+	v := obj.properties["Name"].Value()
+	name, ok := v.(string)
+	if ok {
+		return name
+	} else {
+		return string(obj.path)
+	}
+}
+
+func (obj *blob) call(method string, args ...interface{}) error {
+	return obj.object.Call(dot(obj.iface, method), 0, args...).Err
+}
+
+func (obj *blob) Print() {
+	fmt.Printf("%s [%s]\n", obj.path, obj.iface)
+	printProperties("", obj.properties)
+}
+
+func printProperties(iface string, props properties) {
+	indent := "    "
+	if iface != "" {
+		fmt.Printf("%s%s\n", indent, iface)
+		indent += indent
+	}
+	for key, val := range props {
+		fmt.Printf("%s%s %s\n", indent, key, val.String())
 	}
 }
 
 type predicate func(dbus.ObjectPath, properties) bool
 
-func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) {
+func (cache *ObjectCache) collect(iface string, tests ...predicate) []*blob {
 	var objects []*blob
 	cache.iter(func(path dbus.ObjectPath, dict propertiesDict) bool {
 		props := (*dict)[iface]
@@ -105,14 +148,19 @@ func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) 
 			}
 		}
 		obj := &blob{
-			Path:       path,
-			Interface:  iface,
+			path:       path,
+			iface:      iface,
 			properties: props,
 			object:     bus.Object("org.bluez", path),
 		}
 		objects = append(objects, obj)
 		return false
 	})
+	return objects
+}
+
+func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) {
+	objects := cache.collect(iface, tests...)
 	switch len(objects) {
 	case 1:
 		return objects[0], nil
