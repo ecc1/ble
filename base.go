@@ -51,12 +51,12 @@ func (cache *ObjectCache) Update() error {
 	return nil
 }
 
-type propertiesDict *map[string]map[string]dbus.Variant
+type dbusInterfaces *map[string]map[string]dbus.Variant
 
 // A function of type objectProc is applied to each managed object.
 // It should return true if the iteration should stop,
 // false if it should continue.
-type objectProc func(dbus.ObjectPath, propertiesDict) bool
+type objectProc func(dbus.ObjectPath, dbusInterfaces) bool
 
 func (cache *ObjectCache) iter(proc objectProc) {
 	for path, dict := range cache.objects {
@@ -70,7 +70,7 @@ func (cache *ObjectCache) Print() {
 	cache.iter(printObject)
 }
 
-func printObject(path dbus.ObjectPath, dict propertiesDict) bool {
+func printObject(path dbus.ObjectPath, dict dbusInterfaces) bool {
 	fmt.Println(path)
 	for iface, props := range *dict {
 		printProperties(iface, props)
@@ -104,8 +104,7 @@ func (obj *blob) Interface() string {
 }
 
 func (obj *blob) Name() string {
-	v := obj.properties["Name"].Value()
-	name, ok := v.(string)
+	name, ok := obj.properties["Name"].Value().(string)
 	if ok {
 		return name
 	} else {
@@ -141,7 +140,7 @@ type predicate func(*blob) bool
 
 func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) {
 	var objects []*blob
-	cache.iter(func(path dbus.ObjectPath, dict propertiesDict) bool {
+	cache.iter(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
 		props := (*dict)[iface]
 		if props == nil {
 			return false
