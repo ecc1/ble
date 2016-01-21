@@ -8,19 +8,33 @@ import (
 	"github.com/godbus/dbus"
 )
 
+func addMatch(rule string) error {
+	return bus.BusObject().Call(
+		"org.freedesktop.DBus.AddMatch",
+		0,
+		rule,
+	).Err
+}
+
+func removeMatch(rule string) error {
+	return bus.BusObject().Call(
+		"org.freedesktop.DBus.RemoveMatch",
+		0,
+		rule,
+	).Err
+}
+
 func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	signals := make(chan *dbus.Signal)
 	defer close(signals)
 	bus.Signal(signals)
 	defer bus.RemoveSignal(signals)
-	err := bus.BusObject().Call(
-		"org.freedesktop.DBus.AddMatch",
-		0,
-		"type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'",
-	).Err
+	rule := "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'"
+	err := addMatch(rule)
 	if err != nil {
 		return err
 	}
+	defer removeMatch(rule)
 	err = adapter.SetDiscoveryFilter(uuids...)
 	if err != nil {
 		return err
@@ -39,8 +53,11 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 		case s := <-signals:
 			switch s.Name {
 			case interfacesAdded:
-				log.Printf("%s: discovery finished\n", adapter.Name())
-				return nil
+				if containsDevice(s) {
+					log.Printf("%s: discovery finished\n", adapter.Name())
+					return nil
+				}
+				log.Printf("%s: skipping signal %s with no device interface\n", adapter.Name(), s.Name)
 			default:
 				log.Printf("%s: unexpected signal %s\n", adapter.Name(), s.Name)
 			}
@@ -51,10 +68,21 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	return nil
 }
 
+// Check whether the InterfacesAdded signal contains deviceInterface
+// See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
+func containsDevice(s *dbus.Signal) bool {
+	var dict map[string]map[string]dbus.Variant
+	err := dbus.Store(s.Body[1:2], &dict)
+	if err != nil {
+		return false
+	}
+	return dict[deviceInterface] != nil
+}
+
 func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (Device, error) {
 	device, err := cache.GetDevice(uuids...)
 	if err == nil {
-		log.Printf("%s already discovered\n", device.Name())
+		log.Printf("%s: already discovered\n", device.Name())
 		return device, nil
 	}
 	adapter, err := cache.GetAdapter()
