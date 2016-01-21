@@ -9,8 +9,10 @@ const (
 	interfacesAdded = "org.freedesktop.DBus.ObjectManager.InterfacesAdded"
 )
 
+// The Device type corresponds to the org.bluez.Device1 interface.
+// See bluez/doc/devicet-api.txt
 type Device interface {
-	base
+	BaseObject
 
 	UUIDs() []string
 	Connected() bool
@@ -20,6 +22,7 @@ type Device interface {
 	Pair() error
 }
 
+// GetDevice finds a Device in the object cache with the given UUIDs.
 func (cache *ObjectCache) GetDevice(uuids ...string) (Device, error) {
 	return cache.find(deviceInterface, func(device *blob) bool {
 		if uuids != nil {

@@ -42,6 +42,7 @@ func ManagedObjects() (*ObjectCache, error) {
 	return &objs, nil
 }
 
+// Update refreshes the set of objects in the cache.
 func (cache *ObjectCache) Update() error {
 	updated, err := ManagedObjects()
 	if err != nil {
@@ -66,6 +67,7 @@ func (cache *ObjectCache) iter(proc objectProc) {
 	}
 }
 
+// Print prints the objects in the cache.
 func (cache *ObjectCache) Print() {
 	cache.iter(printObject)
 }
@@ -79,7 +81,16 @@ func printObject(path dbus.ObjectPath, dict dbusInterfaces) bool {
 	return false
 }
 
-type base interface {
+// The BaseObject interface wraps basic operations on a D-Bus object.
+//
+// Path returns the object's path.
+//
+// Interface returns the name of the D-Bus interface provided by the object.
+//
+// Name returns the object's name.
+//
+// Print prints the object.
+type BaseObject interface {
 	Path() dbus.ObjectPath
 	Interface() string
 	Name() string

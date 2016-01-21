@@ -11,8 +11,23 @@ const (
 	adapterInterface = "org.bluez.Adapter1"
 )
 
+// The Adapter type corresponds to the org.bluez.Adapter1 interface.
+// See bluez/doc/adapter-api.txt
+//
+// StartDiscovery starts discovery on the adapter.
+//
+// StopDiscovery stops discovery on the adapter.
+//
+// RemoveDevice removes the specified device and its pairing information.
+//
+// SetDiscoveryFilter sets the discovery filter to require
+// LE transport and the given UUIDs.
+//
+// Discover performs discovery for a device with the given UUIDs,
+// for at most the specified timeout, or indefinitely if timeout is 0.
+// See also the Discover method of the ObjectCache type.
 type Adapter interface {
-	base
+	BaseObject
 
 	StartDiscovery() error
 	StopDiscovery() error
@@ -22,6 +37,7 @@ type Adapter interface {
 	Discover(timeout time.Duration, uuids ...string) error
 }
 
+// GetAdapter finds an Adapter in the object cache and returns it.
 func (cache *ObjectCache) GetAdapter() (Adapter, error) {
 	return cache.find(adapterInterface)
 }

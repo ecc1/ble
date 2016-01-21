@@ -6,28 +6,35 @@ const (
 	descriptorInterface     = "org.bluez.GattDescriptor1"
 )
 
-type gattHandle interface {
-	base
+// The GattHandle interface wraps common operations on GATT objects.
+type GattHandle interface {
+	BaseObject
 
 	UUID() string
 }
 
+// UUID returns the handle's UUID
 func (handle *blob) UUID() string {
 	return handle.properties["UUID"].Value().(string)
 }
 
+// The Service type corresponds to the org.bluez.GattService1 interface.
+// See bluez/doc/gatt-api.txt
 type Service interface {
-	gattHandle
+	GattHandle
 }
 
+// GetService finds a Service in the object cache with the given UUID.
 func (cache *ObjectCache) GetService(uuid string) (Service, error) {
 	return cache.find(serviceInterface, func(serv *blob) bool {
 		return serv.UUID() == uuid
 	})
 }
 
-type readWriteHandle interface {
-	gattHandle
+// The ReadWriteHandle interface describes GATT objects that provide
+// ReadValue and WriteValue operations.
+type ReadWriteHandle interface {
+	GattHandle
 
 	ReadValue() ([]byte, error)
 	WriteValue([]byte) error
@@ -43,10 +50,13 @@ func (handle *blob) WriteValue(data []byte) error {
 	return handle.call("WriteValue", data)
 }
 
+// A function of type NotifyHandler is used to handle notifications.
 type NotifyHandler func([]byte)
 
+// The Characteristic type corresponds to the org.bluez.GattCharacteristic1 interface.
+// See bluez/doc/gatt-api.txt
 type Characteristic interface {
-	readWriteHandle
+	ReadWriteHandle
 
 	Notifying() bool
 
@@ -56,6 +66,7 @@ type Characteristic interface {
 	HandleNotify(NotifyHandler) error
 }
 
+// GetCharacteristic finds a Characteristic in the object cache with the given UUID.
 func (cache *ObjectCache) GetCharacteristic(uuid string) (Characteristic, error) {
 	return cache.find(characteristicInterface, func(char *blob) bool {
 		return char.UUID() == uuid
@@ -74,10 +85,13 @@ func (char *blob) StopNotify() error {
 	return char.call("StopNotify")
 }
 
+// The Descriptor type corresponds to the org.bluez.GattDescriptor1 interface.
+// See bluez/doc/gatt-api.txt
 type Descriptor interface {
-	readWriteHandle
+	ReadWriteHandle
 }
 
+// GetDescriptor finds a Descriptor in the object cache with the given UUID.
 func (cache *ObjectCache) GetDescriptor(uuid string) (Descriptor, error) {
 	return cache.find(descriptorInterface, func(desc *blob) bool {
 		return desc.UUID() == uuid
