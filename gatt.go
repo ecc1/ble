@@ -43,17 +43,27 @@ func (handle *blob) WriteValue(data []byte) error {
 	return handle.call("WriteValue", data)
 }
 
+type NotifyHandler func([]byte)
+
 type Characteristic interface {
 	readWriteHandle
 
+	Notifying() bool
+
 	StartNotify() error
 	StopNotify() error
+
+	HandleNotify(NotifyHandler) error
 }
 
 func (cache *ObjectCache) GetCharacteristic(uuid string) (Characteristic, error) {
 	return cache.find(characteristicInterface, func(char *blob) bool {
 		return char.UUID() == uuid
 	})
+}
+
+func (char *blob) Notifying() bool {
+	return char.properties["Notifying"].Value().(bool)
 }
 
 func (char *blob) StartNotify() error {
