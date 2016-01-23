@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	notifySignals = make(chan *dbus.Signal)
+	notifySignals = make(chan *dbus.Signal, 100)
 	notifyHandler = make(map[dbus.ObjectPath]NotifyHandler)
 )
 
@@ -43,10 +43,9 @@ func applyHandler(s *dbus.Signal) {
 	for k, _ := range changed {
 		keys = append(keys, k)
 	}
-	log.Printf("notify %v\n", keys)
 	data, ok := changed["Value"].Value().([]byte)
 	if ok {
-		handler(data)
+		go handler(data)
 	}
 }
 
