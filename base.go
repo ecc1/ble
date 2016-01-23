@@ -1,3 +1,10 @@
+/*
+Package ble provides functions to discover, connect, pair,
+and communicate with Bluetooth Low Energy peripheral devices.
+
+This implementation uses the BlueZ D-Bus interface, rather than sockets.
+It is similar to github.com/adafruit/Adafruit_Python_BluefruitLE
+*/
 package ble
 
 import (
