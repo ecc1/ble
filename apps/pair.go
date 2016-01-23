@@ -19,13 +19,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = device.Connect()
-	if err != nil {
-		log.Fatal(err)
+	if !device.Connected() {
+		err = device.Connect()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Printf("%s: already connected\n", device.Name())
 	}
 
-	err = device.Pair()
-	if err != nil {
-		log.Fatal(err)
+	if !device.Paired() {
+		err = device.Pair()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Printf("%s: already paired\n", device.Name())
 	}
 }
