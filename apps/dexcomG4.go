@@ -66,24 +66,15 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("%s: authenticated\n", device.Name())
-	rx, err := objects.GetCharacteristic(receiveData)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = rx.HandleNotify(incomingData)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// We need to enable heartbeat notifications
 	// or else we won't get any receiveData responses.
-	hb, err := objects.GetCharacteristic(heartbeat)
+	err = objects.HandleNotify(heartbeat, handleHeartbeat)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = hb.HandleNotify(handleHeartbeat)
+	err = objects.HandleNotify(receiveData, incomingData)
 	if err != nil {
 		log.Fatal(err)
 	}

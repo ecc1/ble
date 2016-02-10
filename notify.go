@@ -54,3 +54,13 @@ func notifyLoop() {
 		applyHandler(s)
 	}
 }
+
+// HandleNotify enables notifications from the GATT characterisitc with
+// the specified UUID and applies the given handler to them when they arrive.
+func (cache *ObjectCache) HandleNotify(uuid string, handler NotifyHandler) error {
+	char, err := cache.GetCharacteristic(uuid)
+	if err != nil {
+		return err
+	}
+	return char.HandleNotify(handler)
+}
