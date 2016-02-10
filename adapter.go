@@ -3,8 +3,6 @@ package ble
 import (
 	"log"
 	"time"
-
-	"github.com/godbus/dbus"
 )
 
 const (
@@ -55,15 +53,4 @@ func (adapter *blob) StopDiscovery() error {
 func (adapter *blob) RemoveDevice(device Device) error {
 	log.Printf("%s: removing device", adapter.Name(), device.Name())
 	return adapter.call("RemoveDevice", device.Path())
-}
-
-func (adapter *blob) SetDiscoveryFilter(uuids ...string) error {
-	log.Printf("%s: setting discovery filter %v\n", adapter.Name(), uuids)
-	return adapter.call(
-		"SetDiscoveryFilter",
-		map[string]dbus.Variant{
-			"Transport": dbus.MakeVariant("le"),
-			"UUIDs":     dbus.MakeVariant(uuids),
-		},
-	)
 }
