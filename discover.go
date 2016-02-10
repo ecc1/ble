@@ -81,13 +81,13 @@ func containsDevice(s *dbus.Signal) bool {
 
 // Discover initiates discovery for a LE peripheral with the given UUIDs.
 // It waits for at most the specified timeout, or indefinitely if timeout = 0.
-func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (Device, error) {
-	device, err := cache.GetDevice(uuids...)
+func Discover(timeout time.Duration, uuids ...string) (Device, error) {
+	device, err := GetDevice(uuids...)
 	if err == nil {
 		log.Printf("%s: already discovered\n", device.Name())
 		return device, nil
 	}
-	adapter, err := cache.GetAdapter()
+	adapter, err := GetAdapter()
 	if err != nil {
 		return nil, err
 	}
@@ -95,9 +95,9 @@ func (cache *ObjectCache) Discover(timeout time.Duration, uuids ...string) (Devi
 	if err != nil {
 		return nil, err
 	}
-	err = cache.Update()
+	err = Update()
 	if err != nil {
 		log.Fatal(err)
 	}
-	return cache.GetDevice(uuids...)
+	return GetDevice(uuids...)
 }

@@ -36,8 +36,8 @@ type Adapter interface {
 }
 
 // GetAdapter finds an Adapter in the object cache and returns it.
-func (cache *ObjectCache) GetAdapter() (Adapter, error) {
-	return cache.find(adapterInterface)
+func GetAdapter() (Adapter, error) {
+	return findObject(adapterInterface)
 }
 
 func (adapter *blob) StartDiscovery() error {

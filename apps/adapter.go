@@ -7,11 +7,7 @@ import (
 )
 
 func main() {
-	objects, err := ble.ManagedObjects()
-	if err != nil {
-		log.Fatal(err)
-	}
-	adapter, err := objects.GetAdapter()
+	adapter, err := ble.GetAdapter()
 	if err != nil {
 		log.Fatal(err)
 	}

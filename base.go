@@ -9,7 +9,6 @@ package ble
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/godbus/dbus"
 )
@@ -18,7 +17,13 @@ const (
 	objectManager = "org.freedesktop.DBus.ObjectManager"
 )
 
-var bus *dbus.Conn
+var (
+	bus *dbus.Conn
+
+	// It would be nice to factor out the subtypes here,
+	// but then the reflection used by dbus.Store() wouldn't work.
+	objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+)
 
 func init() {
 	var err error
@@ -26,57 +31,40 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-type ObjectCache struct {
-	// It would be nice to factor out the subtypes here,
-	// but then the reflection used by dbus.Store() wouldn't work.
-	objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+	err = Update()
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Get all objects and properties.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
-func ManagedObjects() (*ObjectCache, error) {
+func Update() error {
 	call := bus.Object("org.bluez", "/").Call(
 		dot(objectManager, "GetManagedObjects"),
 		0,
 	)
-	var objs ObjectCache
-	err := call.Store(&objs.objects)
-	if err != nil {
-		return nil, err
-	}
-	return &objs, nil
-}
-
-// Update refreshes the set of objects in the cache.
-func (cache *ObjectCache) Update() error {
-	updated, err := ManagedObjects()
-	if err != nil {
-		return err
-	}
-	cache.objects = updated.objects
-	return nil
+	return call.Store(&objects)
 }
 
 type dbusInterfaces *map[string]map[string]dbus.Variant
 
-// A function of type objectProc is applied to each managed object.
-// It should return true if the iteration should stop,
-// false if it should continue.
+// The iterObjects function applies a function of type objectProc to
+// each object in the cache.  It should return true if the iteration
+// should stop, false if it should continue.
 type objectProc func(dbus.ObjectPath, dbusInterfaces) bool
 
-func (cache *ObjectCache) iter(proc objectProc) {
-	for path, dict := range cache.objects {
+func iterObjects(proc objectProc) {
+	for path, dict := range objects {
 		if proc(path, &dict) {
 			return
 		}
 	}
 }
 
-// Print prints the objects in the cache.
-func (cache *ObjectCache) Print() {
-	cache.iter(printObject)
+// Print prints the objects om the cache.
+func Print() {
+	iterObjects(printObject)
 }
 
 func printObject(path dbus.ObjectPath, dict dbusInterfaces) bool {
@@ -154,11 +142,14 @@ func printProperties(iface string, props properties) {
 	}
 }
 
+// The findObject function tests each object with functions of type predicate.
 type predicate func(*blob) bool
 
-func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) {
-	var objects []*blob
-	cache.iter(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
+// findObject finds an object satisfying the given tests.
+// If returns an error if zero or more than one is found.
+func findObject(iface string, tests ...predicate) (*blob, error) {
+	var found []*blob
+	iterObjects(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
 		props := (*dict)[iface]
 		if props == nil {
 			return false
@@ -174,17 +165,14 @@ func (cache *ObjectCache) find(iface string, tests ...predicate) (*blob, error) 
 				return false
 			}
 		}
-		objects = append(objects, obj)
+		found = append(found, obj)
 		return false
 	})
-	switch len(objects) {
+	switch len(found) {
 	case 1:
-		return objects[0], nil
-	case 0:
-		return nil, fmt.Errorf("interface %s not found", iface)
+		return found[0], nil
 	default:
-		log.Printf("WARNING: found %d instances of interface %s\n", len(objects), iface)
-		return objects[0], nil
+		return nil, fmt.Errorf("found %d instances of interface %s", len(found), iface)
 	}
 }
 

@@ -23,8 +23,8 @@ type Device interface {
 }
 
 // GetDevice finds a Device in the object cache with the given UUIDs.
-func (cache *ObjectCache) GetDevice(uuids ...string) (Device, error) {
-	return cache.find(deviceInterface, func(device *blob) bool {
+func GetDevice(uuids ...string) (Device, error) {
+	return findObject(deviceInterface, func(device *blob) bool {
 		if uuids != nil {
 			advertised := device.UUIDs()
 			for _, u := range uuids {

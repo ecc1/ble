@@ -8,12 +8,8 @@ import (
 )
 
 func main() {
-	objects, err := ble.ManagedObjects()
-	if err != nil {
-		log.Fatal(err)
-	}
 	uuids := os.Args[1:]
-	device, err := objects.GetDevice(uuids...)
+	device, err := ble.GetDevice(uuids...)
 	if err != nil {
 		log.Fatal(err)
 	}
