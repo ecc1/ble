@@ -6,6 +6,12 @@ const (
 	descriptorInterface     = "org.bluez.GattDescriptor1"
 )
 
+func (cache *ObjectCache) getObject(iface string, uuid string) (*blob, error) {
+	return cache.find(iface, func(desc *blob) bool {
+		return desc.UUID() == uuid
+	})
+}
+
 // The GattHandle interface wraps common operations on GATT objects.
 type GattHandle interface {
 	BaseObject
@@ -26,9 +32,7 @@ type Service interface {
 
 // GetService finds a Service in the object cache with the given UUID.
 func (cache *ObjectCache) GetService(uuid string) (Service, error) {
-	return cache.find(serviceInterface, func(serv *blob) bool {
-		return serv.UUID() == uuid
-	})
+	return cache.getObject(serviceInterface, uuid)
 }
 
 // The ReadWriteHandle interface describes GATT objects that provide
@@ -68,9 +72,7 @@ type Characteristic interface {
 
 // GetCharacteristic finds a Characteristic in the object cache with the given UUID.
 func (cache *ObjectCache) GetCharacteristic(uuid string) (Characteristic, error) {
-	return cache.find(characteristicInterface, func(char *blob) bool {
-		return char.UUID() == uuid
-	})
+	return cache.getObject(characteristicInterface, uuid)
 }
 
 func (char *blob) Notifying() bool {
@@ -93,7 +95,5 @@ type Descriptor interface {
 
 // GetDescriptor finds a Descriptor in the object cache with the given UUID.
 func (cache *ObjectCache) GetDescriptor(uuid string) (Descriptor, error) {
-	return cache.find(descriptorInterface, func(desc *blob) bool {
-		return desc.UUID() == uuid
-	})
+	return cache.getObject(descriptorInterface, uuid)
 }
