@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) != 2 {
-		log.Fatalf("Usage: %s UUID\n", os.Args[0])
+		log.Fatalf("Usage: %s UUID", os.Args[0])
 	}
 
 	device, err := ble.Discover(0, os.Args[1])
@@ -23,7 +23,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		log.Printf("%s: already connected\n", device.Name())
+		log.Printf("%s: already connected", device.Name())
 	}
 
 	if !device.Paired() {
@@ -32,6 +32,6 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		log.Printf("%s: already paired\n", device.Name())
+		log.Printf("%s: already paired", device.Name())
 	}
 }

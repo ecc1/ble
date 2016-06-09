@@ -41,12 +41,12 @@ func GetAdapter() (Adapter, error) {
 }
 
 func (adapter *blob) StartDiscovery() error {
-	log.Printf("%s: starting discovery\n", adapter.Name())
+	log.Printf("%s: starting discovery", adapter.Name())
 	return adapter.call("StartDiscovery")
 }
 
 func (adapter *blob) StopDiscovery() error {
-	log.Printf("%s: stopping discovery\n", adapter.Name())
+	log.Printf("%s: stopping discovery", adapter.Name())
 	return adapter.call("StopDiscovery")
 }
 

@@ -33,7 +33,7 @@ func (char *blob) HandleNotify(handler NotifyHandler) error {
 func applyHandler(s *dbus.Signal) {
 	handler := notifyHandler[s.Path]
 	if handler == nil {
-		log.Printf("%s: no notify handler\n", s.Path)
+		log.Printf("%s: no notify handler", s.Path)
 		return
 	}
 	// Reflection used by dbus.Store() requires explicit type here.

@@ -53,12 +53,12 @@ func (device *blob) Paired() bool {
 }
 
 func (device *blob) Connect() error {
-	log.Printf("%s: connecting\n", device.Name())
+	log.Printf("%s: connecting", device.Name())
 	return device.call("Connect")
 }
 
 func (device *blob) Pair() error {
-	log.Printf("%s: pairing\n", device.Name())
+	log.Printf("%s: pairing", device.Name())
 	return device.call("Pair")
 }
 

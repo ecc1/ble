@@ -54,12 +54,12 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 			switch s.Name {
 			case interfacesAdded:
 				if containsDevice(s) {
-					log.Printf("%s: discovery finished\n", adapter.Name())
+					log.Printf("%s: discovery finished", adapter.Name())
 					return nil
 				}
-				log.Printf("%s: skipping signal %s with no device interface\n", adapter.Name(), s.Name)
+				log.Printf("%s: skipping signal %s with no device interface", adapter.Name(), s.Name)
 			default:
-				log.Printf("%s: unexpected signal %s\n", adapter.Name(), s.Name)
+				log.Printf("%s: unexpected signal %s", adapter.Name(), s.Name)
 			}
 		case <-t:
 			return fmt.Errorf("discovery timeout")
@@ -84,7 +84,7 @@ func containsDevice(s *dbus.Signal) bool {
 func Discover(timeout time.Duration, uuids ...string) (Device, error) {
 	device, err := GetDevice(uuids...)
 	if err == nil {
-		log.Printf("%s: already discovered\n", device.Name())
+		log.Printf("%s: already discovered", device.Name())
 		return device, nil
 	}
 	adapter, err := GetAdapter()
