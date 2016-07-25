@@ -24,6 +24,12 @@ func removeMatch(rule string) error {
 	).Err
 }
 
+type DiscoveryTimeoutError []string
+
+func (e DiscoveryTimeoutError) Error() string {
+	return fmt.Sprintf("discovery timeout %v", []string(e))
+}
+
 func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	signals := make(chan *dbus.Signal)
 	defer close(signals)
@@ -62,7 +68,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 				log.Printf("%s: unexpected signal %s", adapter.Name(), s.Name)
 			}
 		case <-t:
-			return fmt.Errorf("discovery timeout")
+			return DiscoveryTimeoutError(uuids)
 		}
 	}
 	return nil
@@ -97,7 +103,7 @@ func Discover(timeout time.Duration, uuids ...string) (Device, error) {
 	}
 	err = Update()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	return GetDevice(uuids...)
 }
