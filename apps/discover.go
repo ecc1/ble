@@ -13,5 +13,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	device.Print()
+	device.Print(os.Stdout)
 }

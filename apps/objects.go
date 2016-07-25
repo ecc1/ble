@@ -1,9 +1,11 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ecc1/ble"
 )
 
 func main() {
-	ble.Print()
+	ble.Print(os.Stdout)
 }

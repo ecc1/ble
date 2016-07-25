@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/ecc1/ble"
 )
@@ -11,5 +12,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	adapter.Print()
+	adapter.Print(os.Stdout)
 }

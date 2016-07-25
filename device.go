@@ -29,7 +29,8 @@ func GetDevice(uuids ...string) (Device, error) {
 			advertised := device.UUIDs()
 			for _, u := range uuids {
 				if !validUUID(u) {
-					log.Fatalln("invalid UUID", u)
+					log.Printf("GetDevice: invalid UUID %s", u)
+					return false
 				}
 				if !stringArrayContains(advertised, u) {
 					return false

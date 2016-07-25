@@ -9,6 +9,8 @@ package ble
 
 import (
 	"fmt"
+	"io"
+	"log"
 
 	"github.com/godbus/dbus"
 )
@@ -29,11 +31,11 @@ func init() {
 	var err error
 	bus, err = dbus.SystemBus()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	err = Update()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -63,16 +65,20 @@ func iterObjects(proc objectProc) {
 }
 
 // Print prints the objects om the cache.
-func Print() {
-	iterObjects(printObject)
+func Print(w io.Writer) {
+	printer := func(path dbus.ObjectPath, dict dbusInterfaces) bool {
+		printObject(w, path, dict)
+		return false
+	}
+	iterObjects(printer)
 }
 
-func printObject(path dbus.ObjectPath, dict dbusInterfaces) bool {
-	fmt.Println(path)
+func printObject(w io.Writer, path dbus.ObjectPath, dict dbusInterfaces) bool {
+	fmt.Fprintln(w, path)
 	for iface, props := range *dict {
-		printProperties(iface, props)
+		printProperties(w, iface, props)
 	}
-	fmt.Println()
+	fmt.Fprintln(w)
 	return false
 }
 
@@ -89,7 +95,7 @@ type BaseObject interface {
 	Path() dbus.ObjectPath
 	Interface() string
 	Name() string
-	Print()
+	Print(io.Writer)
 }
 
 type properties map[string]dbus.Variant
@@ -126,19 +132,19 @@ func (obj *blob) call(method string, args ...interface{}) error {
 	return obj.callv(method, args...).Err
 }
 
-func (obj *blob) Print() {
-	fmt.Printf("%s [%s]\n", obj.path, obj.iface)
-	printProperties("", obj.properties)
+func (obj *blob) Print(w io.Writer) {
+	fmt.Fprintf(w, "%s [%s]\n", obj.path, obj.iface)
+	printProperties(w, "", obj.properties)
 }
 
-func printProperties(iface string, props properties) {
+func printProperties(w io.Writer, iface string, props properties) {
 	indent := "    "
 	if iface != "" {
-		fmt.Printf("%s%s\n", indent, iface)
+		fmt.Fprintf(w, "%s%s\n", indent, iface)
 		indent += indent
 	}
 	for key, val := range props {
-		fmt.Printf("%s%s %s\n", indent, key, val.String())
+		fmt.Fprintf(w, "%s%s %s\n", indent, key, val.String())
 	}
 }
 
