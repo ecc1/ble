@@ -8,7 +8,11 @@ import (
 )
 
 func main() {
-	adapter, err := ble.GetAdapter()
+	conn, err := ble.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
+	adapter, err := conn.GetAdapter()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -36,8 +36,8 @@ type Adapter interface {
 }
 
 // GetAdapter finds an Adapter in the object cache and returns it.
-func GetAdapter() (Adapter, error) {
-	return findObject(adapterInterface)
+func (conn *Connection) GetAdapter() (Adapter, error) {
+	return conn.findObject(adapterInterface)
 }
 
 func (adapter *blob) StartDiscovery() error {
@@ -51,6 +51,6 @@ func (adapter *blob) StopDiscovery() error {
 }
 
 func (adapter *blob) RemoveDevice(device Device) error {
-	log.Printf("%s: removing device", adapter.Name(), device.Name())
+	log.Printf("%s: removing device %s", adapter.Name(), device.Name())
 	return adapter.call("RemoveDevice", device.Path())
 }

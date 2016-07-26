@@ -13,9 +13,10 @@ var (
 )
 
 func (char *blob) HandleNotify(handler NotifyHandler) error {
+	conn := char.conn
 	if len(notifyHandler) == 0 {
 		go notifyLoop()
-		bus.Signal(notifySignals)
+		conn.bus.Signal(notifySignals)
 	}
 	path := char.Path()
 	notifyHandler[path] = handler
@@ -23,7 +24,7 @@ func (char *blob) HandleNotify(handler NotifyHandler) error {
 		"type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='%s'",
 		path,
 	)
-	err := addMatch(rule)
+	err := conn.addMatch(rule)
 	if err != nil {
 		return err
 	}
@@ -57,8 +58,8 @@ func notifyLoop() {
 
 // HandleNotify enables notifications from the GATT characterisitc with
 // the specified UUID and applies the given handler to them when they arrive.
-func HandleNotify(uuid string, handler NotifyHandler) error {
-	char, err := GetCharacteristic(uuid)
+func (conn *Connection) HandleNotify(uuid string, handler NotifyHandler) error {
+	char, err := conn.GetCharacteristic(uuid)
 	if err != nil {
 		return err
 	}

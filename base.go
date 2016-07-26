@@ -10,7 +10,6 @@ package ble
 import (
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/godbus/dbus"
 )
@@ -19,34 +18,40 @@ const (
 	objectManager = "org.freedesktop.DBus.ObjectManager"
 )
 
-var (
+type Connection struct {
 	bus *dbus.Conn
 
 	// It would be nice to factor out the subtypes here,
 	// but then the reflection used by dbus.Store() wouldn't work.
 	objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
-)
+}
 
-func init() {
-	var err error
-	bus, err = dbus.SystemBus()
+func Open() (*Connection, error) {
+	bus, err := dbus.SystemBus()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	err = Update()
+	conn := Connection{bus: bus}
+	err = conn.Update()
 	if err != nil {
-		log.Fatal(err)
+		conn.Close()
+		return nil, err
 	}
+	return &conn, nil
+}
+
+func (conn *Connection) Close() {
+	conn.bus.Close()
 }
 
 // Get all objects and properties.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
-func Update() error {
-	call := bus.Object("org.bluez", "/").Call(
+func (conn *Connection) Update() error {
+	call := conn.bus.Object("org.bluez", "/").Call(
 		dot(objectManager, "GetManagedObjects"),
 		0,
 	)
-	return call.Store(&objects)
+	return call.Store(&conn.objects)
 }
 
 type dbusInterfaces *map[string]map[string]dbus.Variant
@@ -56,8 +61,8 @@ type dbusInterfaces *map[string]map[string]dbus.Variant
 // should stop, false if it should continue.
 type objectProc func(dbus.ObjectPath, dbusInterfaces) bool
 
-func iterObjects(proc objectProc) {
-	for path, dict := range objects {
+func (conn *Connection) iterObjects(proc objectProc) {
+	for path, dict := range conn.objects {
 		if proc(path, &dict) {
 			return
 		}
@@ -65,12 +70,12 @@ func iterObjects(proc objectProc) {
 }
 
 // Print prints the objects om the cache.
-func Print(w io.Writer) {
+func (conn *Connection) Print(w io.Writer) {
 	printer := func(path dbus.ObjectPath, dict dbusInterfaces) bool {
 		printObject(w, path, dict)
 		return false
 	}
-	iterObjects(printer)
+	conn.iterObjects(printer)
 }
 
 func printObject(w io.Writer, path dbus.ObjectPath, dict dbusInterfaces) bool {
@@ -92,6 +97,7 @@ func printObject(w io.Writer, path dbus.ObjectPath, dict dbusInterfaces) bool {
 //
 // Print prints the object.
 type BaseObject interface {
+	Conn() *Connection
 	Path() dbus.ObjectPath
 	Interface() string
 	Name() string
@@ -101,10 +107,15 @@ type BaseObject interface {
 type properties map[string]dbus.Variant
 
 type blob struct {
+	conn       *Connection
 	path       dbus.ObjectPath
 	iface      string
 	properties properties
 	object     dbus.BusObject
+}
+
+func (obj *blob) Conn() *Connection {
+	return obj.conn
 }
 
 func (obj *blob) Path() dbus.ObjectPath {
@@ -153,18 +164,19 @@ type predicate func(*blob) bool
 
 // findObject finds an object satisfying the given tests.
 // If returns an error if zero or more than one is found.
-func findObject(iface string, tests ...predicate) (*blob, error) {
+func (conn *Connection) findObject(iface string, tests ...predicate) (*blob, error) {
 	var found []*blob
-	iterObjects(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
+	conn.iterObjects(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
 		props := (*dict)[iface]
 		if props == nil {
 			return false
 		}
 		obj := &blob{
+			conn:       conn,
 			path:       path,
 			iface:      iface,
 			properties: props,
-			object:     bus.Object("org.bluez", path),
+			object:     conn.bus.Object("org.bluez", path),
 		}
 		for _, test := range tests {
 			if !test(obj) {

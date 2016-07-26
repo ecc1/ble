@@ -8,16 +8,16 @@ import (
 	"github.com/godbus/dbus"
 )
 
-func addMatch(rule string) error {
-	return bus.BusObject().Call(
+func (conn *Connection) addMatch(rule string) error {
+	return conn.bus.BusObject().Call(
 		"org.freedesktop.DBus.AddMatch",
 		0,
 		rule,
 	).Err
 }
 
-func removeMatch(rule string) error {
-	return bus.BusObject().Call(
+func (conn *Connection) removeMatch(rule string) error {
+	return conn.bus.BusObject().Call(
 		"org.freedesktop.DBus.RemoveMatch",
 		0,
 		rule,
@@ -31,16 +31,17 @@ func (e DiscoveryTimeoutError) Error() string {
 }
 
 func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
+	conn := adapter.conn
 	signals := make(chan *dbus.Signal)
 	defer close(signals)
-	bus.Signal(signals)
-	defer bus.RemoveSignal(signals)
+	conn.bus.Signal(signals)
+	defer conn.bus.RemoveSignal(signals)
 	rule := "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'"
-	err := addMatch(rule)
+	err := adapter.conn.addMatch(rule)
 	if err != nil {
 		return err
 	}
-	defer removeMatch(rule)
+	defer conn.removeMatch(rule)
 	err = adapter.SetDiscoveryFilter(uuids...)
 	if err != nil {
 		return err
@@ -71,7 +72,6 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 			return DiscoveryTimeoutError(uuids)
 		}
 	}
-	return nil
 }
 
 // Check whether the InterfacesAdded signal contains deviceInterface
@@ -87,13 +87,13 @@ func containsDevice(s *dbus.Signal) bool {
 
 // Discover initiates discovery for a LE peripheral with the given UUIDs.
 // It waits for at most the specified timeout, or indefinitely if timeout = 0.
-func Discover(timeout time.Duration, uuids ...string) (Device, error) {
-	device, err := GetDevice(uuids...)
+func (conn *Connection) Discover(timeout time.Duration, uuids ...string) (Device, error) {
+	device, err := conn.GetDevice(uuids...)
 	if err == nil {
 		log.Printf("%s: already discovered", device.Name())
 		return device, nil
 	}
-	adapter, err := GetAdapter()
+	adapter, err := conn.GetAdapter()
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +101,9 @@ func Discover(timeout time.Duration, uuids ...string) (Device, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = Update()
+	err = conn.Update()
 	if err != nil {
 		return nil, err
 	}
-	return GetDevice(uuids...)
+	return conn.GetDevice(uuids...)
 }

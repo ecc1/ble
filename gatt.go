@@ -6,8 +6,8 @@ const (
 	descriptorInterface     = "org.bluez.GattDescriptor1"
 )
 
-func findGattObject(iface string, uuid string) (*blob, error) {
-	return findObject(iface, func(desc *blob) bool {
+func (conn *Connection) findGattObject(iface string, uuid string) (*blob, error) {
+	return conn.findObject(iface, func(desc *blob) bool {
 		return desc.UUID() == uuid
 	})
 }
@@ -31,8 +31,8 @@ type Service interface {
 }
 
 // GetService finds a Service with the given UUID.
-func GetService(uuid string) (Service, error) {
-	return findGattObject(serviceInterface, uuid)
+func (conn *Connection) GetService(uuid string) (Service, error) {
+	return conn.findGattObject(serviceInterface, uuid)
 }
 
 // The ReadWriteHandle interface describes GATT objects that provide
@@ -71,8 +71,8 @@ type Characteristic interface {
 }
 
 // GetCharacteristic finds a Characteristic with the given UUID.
-func GetCharacteristic(uuid string) (Characteristic, error) {
-	return findGattObject(characteristicInterface, uuid)
+func (conn *Connection) GetCharacteristic(uuid string) (Characteristic, error) {
+	return conn.findGattObject(characteristicInterface, uuid)
 }
 
 func (char *blob) Notifying() bool {
@@ -94,6 +94,6 @@ type Descriptor interface {
 }
 
 // GetDescriptor finds a Descriptor with the given UUID.
-func GetDescriptor(uuid string) (Descriptor, error) {
-	return findGattObject(descriptorInterface, uuid)
+func (conn *Connection) GetDescriptor(uuid string) (Descriptor, error) {
+	return conn.findGattObject(descriptorInterface, uuid)
 }

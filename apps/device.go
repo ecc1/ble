@@ -8,8 +8,12 @@ import (
 )
 
 func main() {
+	conn, err := ble.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
 	uuids := os.Args[1:]
-	device, err := ble.GetDevice(uuids...)
+	device, err := conn.GetDevice(uuids...)
 	if err != nil {
 		log.Fatal(err)
 	}

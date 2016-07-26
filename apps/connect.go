@@ -11,8 +11,11 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatalf("Usage: %s UUID", os.Args[0])
 	}
-
-	device, err := ble.Discover(0, os.Args[1])
+	conn, err := ble.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
+	device, err := conn.Discover(0, os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
