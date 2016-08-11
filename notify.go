@@ -19,7 +19,11 @@ func (char *blob) HandleNotify(handler NotifyHandler) error {
 		conn.bus.Signal(notifySignals)
 	}
 	path := char.Path()
+	prev := notifyHandler[path]
 	notifyHandler[path] = handler
+	if prev != nil {
+		return nil
+	}
 	rule := fmt.Sprintf(
 		"type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='%s'",
 		path,
