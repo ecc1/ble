@@ -10,6 +10,7 @@ package ble
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/godbus/dbus"
 )
@@ -136,7 +137,16 @@ func (obj *blob) Name() string {
 }
 
 func (obj *blob) callv(method string, args ...interface{}) *dbus.Call {
-	return obj.object.Call(dot(obj.iface, method), 0, args...)
+	const callTimeout = 5 * time.Second
+	c := obj.object.Go(dot(obj.iface, method), 0, nil, args...)
+	if c.Err == nil {
+		select {
+		case <-c.Done:
+		case <-time.After(callTimeout):
+			c.Err = fmt.Errorf("BLE call timeout")
+		}
+	}
+	return c
 }
 
 func (obj *blob) call(method string, args ...interface{}) error {
