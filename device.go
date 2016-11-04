@@ -25,16 +25,14 @@ type Device interface {
 // GetDevice finds a Device in the object cache with the given UUIDs.
 func (conn *Connection) GetDevice(uuids ...string) (Device, error) {
 	return conn.findObject(deviceInterface, func(device *blob) bool {
-		if uuids != nil {
-			advertised := device.UUIDs()
-			for _, u := range uuids {
-				if !validUUID(u) {
-					log.Printf("GetDevice: invalid UUID %s", u)
-					return false
-				}
-				if !stringArrayContains(advertised, u) {
-					return false
-				}
+		advertised := device.UUIDs()
+		for _, u := range uuids {
+			if !validUUID(u) {
+				log.Printf("GetDevice: invalid UUID %s", u)
+				return false
+			}
+			if !stringArrayContains(advertised, u) {
+				return false
 			}
 		}
 		return true
