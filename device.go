@@ -29,18 +29,21 @@ func (conn *Connection) matchDevice(matching predicate) (Device, error) {
 // GetDevice finds a Device in the object cache matching the given UUIDs.
 func (conn *Connection) GetDevice(uuids ...string) (Device, error) {
 	return conn.matchDevice(func(device *blob) bool {
-		advertised := device.UUIDs()
-		for _, u := range uuids {
-			if !ValidUUID(u) {
-				log.Printf("GetDevice: invalid UUID %s", u)
-				return false
-			}
-			if !stringArrayContains(advertised, u) {
-				return false
-			}
-		}
-		return true
+		return uuidsInclude(device.UUIDs(), uuids)
 	})
+}
+
+func uuidsInclude(advertised []string, uuids []string) bool {
+	for _, u := range uuids {
+		if !ValidUUID(u) {
+			log.Printf("invalid UUID %s", u)
+			return false
+		}
+		if !stringArrayContains(advertised, u) {
+			return false
+		}
+	}
+	return true
 }
 
 // GetDeviceByName finds a Device in the object cache with the given name.

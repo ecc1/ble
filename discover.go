@@ -60,11 +60,17 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 		case s := <-signals:
 			switch s.Name {
 			case interfacesAdded:
-				if containsDevice(s) {
-					log.Printf("%s: discovery finished", adapter.Name())
+				props := interfaceProperties(s)
+				if props == nil {
+					log.Printf("%s: skipping signal with no device interface", adapter.Name())
+					continue
+				}
+				name := props["Name"].Value().(string)
+				services := props["UUIDs"].Value().([]string)
+				if uuidsInclude(services, uuids) {
+					log.Printf("%s: discovered %s", adapter.Name(), name)
 					return nil
 				}
-				log.Printf("%s: skipping signal %s with no device interface", adapter.Name(), s.Name)
 			default:
 				log.Printf("%s: unexpected signal %s", adapter.Name(), s.Name)
 			}
@@ -74,15 +80,17 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	}
 }
 
-// Check whether the InterfacesAdded signal contains deviceInterface
+// If the InterfacesAdded signal contains deviceInterface,
+// return the corresponding properties, otherwise nil.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
-func containsDevice(s *dbus.Signal) bool {
+func interfaceProperties(s *dbus.Signal) properties {
 	var dict map[string]map[string]dbus.Variant
 	err := dbus.Store(s.Body[1:2], &dict)
 	if err != nil {
-		return false
+		log.Print(err)
+		return nil
 	}
-	return dict[deviceInterface] != nil
+	return dict[deviceInterface]
 }
 
 // Discover initiates discovery for a LE peripheral with the given UUIDs.
