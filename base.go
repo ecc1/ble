@@ -172,9 +172,9 @@ func printProperties(w io.Writer, iface string, props properties) {
 // The findObject function tests each object with functions of type predicate.
 type predicate func(*blob) bool
 
-// findObject finds an object satisfying the given tests.
+// findObject finds an object satisfying the given predicate.
 // If returns an error if zero or more than one is found.
-func (conn *Connection) findObject(iface string, tests ...predicate) (*blob, error) {
+func (conn *Connection) findObject(iface string, matching predicate) (*blob, error) {
 	var found []*blob
 	conn.iterObjects(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
 		props := (*dict)[iface]
@@ -188,17 +188,16 @@ func (conn *Connection) findObject(iface string, tests ...predicate) (*blob, err
 			properties: props,
 			object:     conn.bus.Object("org.bluez", path),
 		}
-		for _, test := range tests {
-			if !test(obj) {
-				return false
-			}
+		if matching(obj) {
+			found = append(found, obj)
 		}
-		found = append(found, obj)
 		return false
 	})
 	switch len(found) {
 	case 1:
 		return found[0], nil
+	case 0:
+		return nil, fmt.Errorf("interface %s not found", iface)
 	default:
 		return nil, fmt.Errorf("found %d instances of interface %s", len(found), iface)
 	}

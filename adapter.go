@@ -37,7 +37,7 @@ type Adapter interface {
 
 // GetAdapter finds an Adapter in the object cache and returns it.
 func (conn *Connection) GetAdapter() (Adapter, error) {
-	return conn.findObject(adapterInterface)
+	return conn.findObject(adapterInterface, func(_ *blob) bool { return true })
 }
 
 func (adapter *blob) StartDiscovery() error {
