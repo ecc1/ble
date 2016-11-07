@@ -12,8 +12,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	uuids := os.Args[1:]
-	device, err := conn.GetDevice(uuids...)
+	device := ble.Device(nil)
+	if len(os.Args) == 2 && !ble.ValidUUID(os.Args[1]) {
+		device, err = conn.GetDeviceByName(os.Args[1])
+	} else {
+		uuids := os.Args[1:]
+		device, err = conn.GetDevice(uuids...)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}

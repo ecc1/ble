@@ -13,7 +13,7 @@ func isHex(s string) bool {
 	return true
 }
 
-func validUUID(u string) bool {
+func ValidUUID(u string) bool {
 	switch len(u) {
 	case 4:
 		return isHex(u)

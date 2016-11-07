@@ -22,12 +22,16 @@ type Device interface {
 	Pair() error
 }
 
-// GetDevice finds a Device in the object cache with the given UUIDs.
+func (conn *Connection) matchDevice(matching predicate) (Device, error) {
+	return conn.findObject(deviceInterface, matching)
+}
+
+// GetDevice finds a Device in the object cache matching the given UUIDs.
 func (conn *Connection) GetDevice(uuids ...string) (Device, error) {
-	return conn.findObject(deviceInterface, func(device *blob) bool {
+	return conn.matchDevice(func(device *blob) bool {
 		advertised := device.UUIDs()
 		for _, u := range uuids {
-			if !validUUID(u) {
+			if !ValidUUID(u) {
 				log.Printf("GetDevice: invalid UUID %s", u)
 				return false
 			}
@@ -36,6 +40,13 @@ func (conn *Connection) GetDevice(uuids ...string) (Device, error) {
 			}
 		}
 		return true
+	})
+}
+
+// GetDeviceByName finds a Device in the object cache with the given name.
+func (conn *Connection) GetDeviceByName(name string) (Device, error) {
+	return conn.matchDevice(func(device *blob) bool {
+		return device.Name() == name
 	})
 }
 
