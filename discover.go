@@ -60,15 +60,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 		case s := <-signals:
 			switch s.Name {
 			case interfacesAdded:
-				props := interfaceProperties(s)
-				if props == nil {
-					log.Printf("%s: skipping signal with no device interface", adapter.Name())
-					continue
-				}
-				name := props["Name"].Value().(string)
-				services := props["UUIDs"].Value().([]string)
-				if uuidsInclude(services, uuids) {
-					log.Printf("%s: discovered %s", adapter.Name(), name)
+				if adapter.discoveryComplete(s, uuids) {
 					return nil
 				}
 			default:
@@ -78,6 +70,22 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 			return DiscoveryTimeoutError(uuids)
 		}
 	}
+}
+
+func (adapter *blob) discoveryComplete(s *dbus.Signal, uuids []string) bool {
+	props := interfaceProperties(s)
+	if props == nil {
+		log.Printf("%s: skipping signal with no device interface", adapter.Name())
+		return false
+	}
+	name := props["Name"].Value().(string)
+	services := props["UUIDs"].Value().([]string)
+	if uuidsInclude(services, uuids) {
+		log.Printf("%s: discovered %s", adapter.Name(), name)
+		return true
+	}
+	log.Printf("%s: skipping signal for device %s", adapter.Name(), name)
+	return false
 }
 
 // If the InterfacesAdded signal contains deviceInterface,
