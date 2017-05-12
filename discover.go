@@ -24,12 +24,16 @@ func (conn *Connection) removeMatch(rule string) error {
 	).Err
 }
 
+// DiscoveryTimeoutError indicates that discovery has timed out.
 type DiscoveryTimeoutError []string
 
 func (e DiscoveryTimeoutError) Error() string {
 	return fmt.Sprintf("discovery timeout %v", []string(e))
 }
 
+// Discover puts the adapter in discovery mode,
+// waits for the specified timeout to discover one of the given UUIDs,
+// and then stops discovery mode.
 func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	conn := adapter.conn
 	signals := make(chan *dbus.Signal)
@@ -41,7 +45,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.removeMatch(rule)
+	defer func() { _ = conn.removeMatch(rule) }()
 	err = adapter.SetDiscoveryFilter(uuids...)
 	if err != nil {
 		return err
@@ -50,7 +54,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	if err != nil {
 		return err
 	}
-	defer adapter.StopDiscovery()
+	defer func() { _ = adapter.StopDiscovery() }()
 	var t <-chan time.Time
 	if timeout != 0 {
 		t = time.After(timeout)

@@ -12,7 +12,7 @@ func (conn *Connection) findGattObject(iface string, uuid string) (*blob, error)
 	})
 }
 
-// The GattHandle interface wraps common operations on GATT objects.
+// GattHandle is the interface satisfied by GATT handles.
 type GattHandle interface {
 	BaseObject
 
@@ -24,7 +24,7 @@ func (handle *blob) UUID() string {
 	return handle.properties["UUID"].Value().(string)
 }
 
-// The Service type corresponds to the org.bluez.GattService1 interface.
+// Service corresponds to the org.bluez.GattService1 interface.
 // See bluez/doc/gatt-api.txt
 type Service interface {
 	GattHandle
@@ -35,8 +35,8 @@ func (conn *Connection) GetService(uuid string) (Service, error) {
 	return conn.findGattObject(serviceInterface, uuid)
 }
 
-// The ReadWriteHandle interface describes GATT objects that provide
-// ReadValue and WriteValue operations.
+// ReadWriteHandle is the interface satisfied by GATT objects
+// that provide ReadValue and WriteValue operations.
 type ReadWriteHandle interface {
 	GattHandle
 
@@ -44,20 +44,22 @@ type ReadWriteHandle interface {
 	WriteValue([]byte) error
 }
 
+// ReadValue reads the handle's value.
 func (handle *blob) ReadValue() ([]byte, error) {
 	var data []byte
 	err := handle.callv("ReadValue", properties{}).Store(&data)
 	return data, err
 }
 
+// WriteValue writes a value to the handle.
 func (handle *blob) WriteValue(data []byte) error {
 	return handle.call("WriteValue", data, properties{})
 }
 
-// A function of type NotifyHandler is used to handle notifications.
+// NotifyHandler represents a function that handles notifications.
 type NotifyHandler func([]byte)
 
-// The Characteristic type corresponds to the org.bluez.GattCharacteristic1 interface.
+// Characteristic corresponds to the org.bluez.GattCharacteristic1 interface.
 // See bluez/doc/gatt-api.txt
 type Characteristic interface {
 	ReadWriteHandle
@@ -75,19 +77,22 @@ func (conn *Connection) GetCharacteristic(uuid string) (Characteristic, error) {
 	return conn.findGattObject(characteristicInterface, uuid)
 }
 
-func (char *blob) Notifying() bool {
-	return char.properties["Notifying"].Value().(bool)
+// Notifying returns whether or not a Characteristic is notifying.
+func (handle *blob) Notifying() bool {
+	return handle.properties["Notifying"].Value().(bool)
 }
 
-func (char *blob) StartNotify() error {
-	return char.call("StartNotify")
+// StartNotify starts notifying.
+func (handle *blob) StartNotify() error {
+	return handle.call("StartNotify")
 }
 
-func (char *blob) StopNotify() error {
-	return char.call("StopNotify")
+// StartNotify stops notifying.
+func (handle *blob) StopNotify() error {
+	return handle.call("StopNotify")
 }
 
-// The Descriptor type corresponds to the org.bluez.GattDescriptor1 interface.
+// Descriptor corresponds to the org.bluez.GattDescriptor1 interface.
 // See bluez/doc/gatt-api.txt
 type Descriptor interface {
 	ReadWriteHandle

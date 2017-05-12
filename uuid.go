@@ -22,6 +22,7 @@ func hexMatch(s, pattern string) bool {
 	return true
 }
 
+// ValidUUID checks whether a string is a valid UUID.
 func ValidUUID(u string) bool {
 	switch len(u) {
 	case 4:

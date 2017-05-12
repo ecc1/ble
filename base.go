@@ -19,6 +19,7 @@ const (
 	objectManager = "org.freedesktop.DBus.ObjectManager"
 )
 
+// Connection represents a D-Bus connection.
 type Connection struct {
 	bus *dbus.Conn
 
@@ -27,6 +28,7 @@ type Connection struct {
 	objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
 }
 
+// Open opens a connection to the system D-Bus
 func Open() (*Connection, error) {
 	bus, err := dbus.SystemBus()
 	if err != nil {
@@ -41,11 +43,12 @@ func Open() (*Connection, error) {
 	return &conn, nil
 }
 
+// Close closes the D-Bus connection.
 func (conn *Connection) Close() {
-	conn.bus.Close()
+	_ = conn.bus.Close()
 }
 
-// Get all objects and properties.
+// Update gets all objects and properties.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
 func (conn *Connection) Update() error {
 	call := conn.bus.Object("org.bluez", "/").Call(
@@ -70,11 +73,10 @@ func (conn *Connection) iterObjects(proc objectProc) {
 	}
 }
 
-// Print prints the objects om the cache.
+// Print prints the objects in the cache.
 func (conn *Connection) Print(w io.Writer) {
 	printer := func(path dbus.ObjectPath, dict dbusInterfaces) bool {
-		printObject(w, path, dict)
-		return false
+		return printObject(w, path, dict)
 	}
 	conn.iterObjects(printer)
 }
@@ -88,15 +90,7 @@ func printObject(w io.Writer, path dbus.ObjectPath, dict dbusInterfaces) bool {
 	return false
 }
 
-// The BaseObject interface wraps basic operations on a D-Bus object.
-//
-// Path returns the object's path.
-//
-// Interface returns the name of the D-Bus interface provided by the object.
-//
-// Name returns the object's name.
-//
-// Print prints the object.
+// BaseObject is the interface satisfied by bluez D-Bus objects.
 type BaseObject interface {
 	Conn() *Connection
 	Path() dbus.ObjectPath
@@ -115,25 +109,28 @@ type blob struct {
 	object     dbus.BusObject
 }
 
+// Conn returns the object's D-Bus connection.
 func (obj *blob) Conn() *Connection {
 	return obj.conn
 }
 
+// Path returns the object's D-Bus path.
 func (obj *blob) Path() dbus.ObjectPath {
 	return obj.path
 }
 
+// Interface returns the object's D-Bus interface name.
 func (obj *blob) Interface() string {
 	return obj.iface
 }
 
+// Name returns the object's name.
 func (obj *blob) Name() string {
 	name, ok := obj.properties["Name"].Value().(string)
-	if ok {
-		return name
-	} else {
+	if !ok {
 		return string(obj.path)
 	}
+	return name
 }
 
 func (obj *blob) callv(method string, args ...interface{}) *dbus.Call {
@@ -153,6 +150,7 @@ func (obj *blob) call(method string, args ...interface{}) error {
 	return obj.callv(method, args...).Err
 }
 
+// Print prints the object.
 func (obj *blob) Print(w io.Writer) {
 	fmt.Fprintf(w, "%s [%s]\n", obj.path, obj.iface)
 	printProperties(w, "", obj.properties)

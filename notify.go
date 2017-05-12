@@ -43,11 +43,7 @@ func applyHandler(s *dbus.Signal) {
 	}
 	// Reflection used by dbus.Store() requires explicit type here.
 	var changed map[string]dbus.Variant
-	dbus.Store(s.Body[1:2], &changed)
-	var keys []string
-	for k, _ := range changed {
-		keys = append(keys, k)
-	}
+	_ = dbus.Store(s.Body[1:2], &changed)
 	data, ok := changed["Value"].Value().([]byte)
 	if ok {
 		go handler(data)
