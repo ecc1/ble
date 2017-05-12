@@ -55,6 +55,10 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	if timeout != 0 {
 		t = time.After(timeout)
 	}
+	return adapter.discoverLoop(uuids, signals, t)
+}
+
+func (adapter *blob) discoverLoop(uuids []string, signals <-chan *dbus.Signal, timeout <-chan time.Time) error {
 	for {
 		select {
 		case s := <-signals:
@@ -66,7 +70,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 			default:
 				log.Printf("%s: unexpected signal %s", adapter.Name(), s.Name)
 			}
-		case <-t:
+		case <-timeout:
 			return DiscoveryTimeoutError(uuids)
 		}
 	}
