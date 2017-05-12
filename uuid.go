@@ -2,12 +2,21 @@ package ble
 
 import "strings"
 
-const hexDigits = "0123456789abcdef"
-
-func isHex(s string) bool {
-	for _, c := range s {
-		if !strings.ContainsRune(hexDigits, c) {
-			return false
+func hexMatch(s, pattern string) bool {
+	const hexDigits = "0123456789abcdef"
+	if len(s) != len(pattern) {
+		return false
+	}
+	for i := range s {
+		switch pattern[i] {
+		case 'x':
+			if strings.IndexByte(hexDigits, s[i]) == -1 {
+				return false
+			}
+		default:
+			if s[i] != pattern[i] {
+				return false
+			}
 		}
 	}
 	return true
@@ -16,13 +25,9 @@ func isHex(s string) bool {
 func ValidUUID(u string) bool {
 	switch len(u) {
 	case 4:
-		return isHex(u)
+		return hexMatch(u, "xxxx")
 	case 36:
-		return isHex(u[0:8]) && u[8] == '-' &&
-			isHex(u[9:13]) && u[13] == '-' &&
-			isHex(u[14:18]) && u[18] == '-' &&
-			isHex(u[19:23]) && u[23] == '-' &&
-			isHex(u[24:36])
+		return hexMatch(u, "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 	default:
 		return false
 	}
