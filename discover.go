@@ -112,11 +112,6 @@ func interfaceProperties(s *dbus.Signal) properties {
 // Discover initiates discovery for a LE peripheral with the given UUIDs.
 // It waits for at most the specified timeout, or indefinitely if timeout = 0.
 func (conn *Connection) Discover(timeout time.Duration, uuids ...string) (Device, error) {
-	device, err := conn.GetDevice(uuids...)
-	if err == nil {
-		log.Printf("%s: already discovered", device.Name())
-		return device, nil
-	}
 	adapter, err := conn.GetAdapter()
 	if err != nil {
 		return nil, err
