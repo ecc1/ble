@@ -19,6 +19,7 @@ type Device interface {
 	Paired() bool
 
 	Connect() error
+	Disconnect() error
 	Pair() error
 }
 
@@ -68,6 +69,11 @@ func (device *blob) Paired() bool {
 func (device *blob) Connect() error {
 	log.Printf("%s: connecting", device.Name())
 	return device.call("Connect")
+}
+
+func (device *blob) Disconnect() error {
+	log.Printf("%s: disconnecting", device.Name())
+	return device.call("Disconnect")
 }
 
 func (device *blob) Pair() error {
