@@ -1,6 +1,9 @@
 package ble
 
 const (
+	// GATTMTU is the maximum size of a write to a GATT characteristic.
+	GATTMTU = 20
+
 	serviceInterface        = "org.bluez.GattService1"
 	characteristicInterface = "org.bluez.GattCharacteristic1"
 	descriptorInterface     = "org.bluez.GattDescriptor1"
