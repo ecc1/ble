@@ -51,10 +51,8 @@ func (conn *Connection) Close() {
 // Update gets all objects and properties.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
 func (conn *Connection) Update() error {
-	call := conn.bus.Object("org.bluez", "/").Call(
-		dot(objectManager, "GetManagedObjects"),
-		0,
-	)
+	obj := conn.bus.Object("org.bluez", "/")
+	call := obj.Call(dot(objectManager, "GetManagedObjects"), 0)
 	return call.Store(&conn.objects)
 }
 
