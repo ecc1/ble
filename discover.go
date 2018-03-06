@@ -83,17 +83,24 @@ func (adapter *blob) discoverLoop(uuids []string, signals <-chan *dbus.Signal, t
 func (adapter *blob) discoveryComplete(s *dbus.Signal, uuids []string) bool {
 	props := interfaceProperties(s)
 	if props == nil {
-		log.Printf("%s: skipping signal with no device interface", adapter.Name())
+		log.Printf("%s: skipping signal %+v with no device interface", adapter.Name(), s)
 		return false
 	}
-	name := props["Name"].Value().(string)
-	services := props["UUIDs"].Value().([]string)
-	if uuidsInclude(services, uuids) {
-		log.Printf("%s: discovered %s", adapter.Name(), name)
-		return true
+	name, ok := props["Name"].Value().(string)
+	if !ok {
+		name = "[unknown]"
 	}
-	log.Printf("%s: skipping signal for device %s", adapter.Name(), name)
-	return false
+	services, ok := props["UUIDs"].Value().([]string)
+	if !ok {
+		services = nil
+	}
+	if !uuidsInclude(services, uuids) {
+		log.Printf("%s: skipping signal for device %s without matching UUIDs", adapter.Name(), name)
+		log.Printf("%s: wanted %v, got %v", adapter.Name(), uuids, services)
+		return false
+	}
+	log.Printf("%s: discovered %s", adapter.Name(), name)
+	return true
 }
 
 // If the InterfacesAdded signal contains deviceInterface,
