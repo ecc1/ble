@@ -83,7 +83,7 @@ func (adapter *blob) discoverLoop(uuids []string, signals <-chan *dbus.Signal, t
 func (adapter *blob) discoveryComplete(s *dbus.Signal, uuids []string) bool {
 	props := interfaceProperties(s)
 	if props == nil {
-		log.Printf("%s: skipping signal %+v with no device interface", adapter.Name(), s)
+		log.Printf("%s: skipping signal %s with no device interface", adapter.Name(), s.Name)
 		return false
 	}
 	name, ok := props["Name"].Value().(string)
@@ -106,8 +106,8 @@ func (adapter *blob) discoveryComplete(s *dbus.Signal, uuids []string) bool {
 // If the InterfacesAdded signal contains deviceInterface,
 // return the corresponding properties, otherwise nil.
 // See http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
-func interfaceProperties(s *dbus.Signal) properties {
-	var dict map[string]map[string]dbus.Variant
+func interfaceProperties(s *dbus.Signal) Properties {
+	var dict map[string]Properties
 	err := dbus.Store(s.Body[1:2], &dict)
 	if err != nil {
 		log.Print(err)

@@ -50,13 +50,13 @@ type ReadWriteHandle interface {
 // ReadValue reads the handle's value.
 func (handle *blob) ReadValue() ([]byte, error) {
 	var data []byte
-	err := handle.callv("ReadValue", properties{}).Store(&data)
+	err := handle.callv("ReadValue", Properties{}).Store(&data)
 	return data, err
 }
 
 // WriteValue writes a value to the handle.
 func (handle *blob) WriteValue(data []byte) error {
-	return handle.call("WriteValue", data, properties{})
+	return handle.call("WriteValue", data, Properties{})
 }
 
 // NotifyHandler represents a function that handles notifications.

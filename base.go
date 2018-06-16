@@ -22,16 +22,21 @@ const (
 // Use type aliases for these subtypes so the reflection
 // used by dbus.Store() works correctly.
 
-// Object represents a managed D-Bus object.
-type Object = map[string]properties
+type (
+	// Object represents a managed D-Bus object
+	// as a map from interface names to properties.
+	Object = map[string]Properties
 
-type properties = map[string]dbus.Variant
+	// Properties represents a dbus interface
+	// as a map from property names to values (D-Bus variants).
+	Properties = map[string]dbus.Variant
 
-// Connection represents a D-Bus connection.
-type Connection struct {
-	bus     *dbus.Conn
-	objects map[dbus.ObjectPath]Object
-}
+	// Connection represents a D-Bus connection.
+	Connection struct {
+		bus     *dbus.Conn
+		objects map[dbus.ObjectPath]Object
+	}
+)
 
 // Open opens a connection to the system D-Bus
 func Open() (*Connection, error) {
@@ -76,10 +81,9 @@ func (conn *Connection) iterObjects(proc objectProc) {
 
 // Print prints the objects in the cache.
 func (conn *Connection) Print(w io.Writer) {
-	printer := func(path dbus.ObjectPath, dict Object) bool {
+	conn.iterObjects(func(path dbus.ObjectPath, dict Object) bool {
 		return printObject(w, path, dict)
-	}
-	conn.iterObjects(printer)
+	})
 }
 
 func printObject(w io.Writer, path dbus.ObjectPath, dict Object) bool {
@@ -104,7 +108,7 @@ type blob struct {
 	conn       *Connection
 	path       dbus.ObjectPath
 	iface      string
-	properties properties
+	properties Properties
 	object     dbus.BusObject
 }
 
@@ -155,7 +159,7 @@ func (obj *blob) Print(w io.Writer) {
 	printProperties(w, "", obj.properties)
 }
 
-func printProperties(w io.Writer, iface string, props properties) {
+func printProperties(w io.Writer, iface string, props Properties) {
 	indent := "    "
 	if iface != "" {
 		fmt.Fprintf(w, "%s%s\n", indent, iface)
