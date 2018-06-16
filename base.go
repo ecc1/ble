@@ -19,13 +19,18 @@ const (
 	objectManager = "org.freedesktop.DBus.ObjectManager"
 )
 
+// Use type aliases for these subtypes so the reflection
+// used by dbus.Store() works correctly.
+
+// Object represents a managed D-Bus object.
+type Object = map[string]properties
+
+type properties = map[string]dbus.Variant
+
 // Connection represents a D-Bus connection.
 type Connection struct {
-	bus *dbus.Conn
-
-	// It would be nice to factor out the subtypes here,
-	// but then the reflection used by dbus.Store() wouldn't work.
-	objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+	bus     *dbus.Conn
+	objects map[dbus.ObjectPath]Object
 }
 
 // Open opens a connection to the system D-Bus
@@ -56,16 +61,14 @@ func (conn *Connection) Update() error {
 	return call.Store(&conn.objects)
 }
 
-type dbusInterfaces *map[string]map[string]dbus.Variant
-
 // The iterObjects function applies a function of type objectProc to
 // each object in the cache.  It should return true if the iteration
 // should stop, false if it should continue.
-type objectProc func(dbus.ObjectPath, dbusInterfaces) bool
+type objectProc func(dbus.ObjectPath, Object) bool
 
 func (conn *Connection) iterObjects(proc objectProc) {
 	for path, dict := range conn.objects {
-		if proc(path, &dict) {
+		if proc(path, dict) {
 			return
 		}
 	}
@@ -73,15 +76,15 @@ func (conn *Connection) iterObjects(proc objectProc) {
 
 // Print prints the objects in the cache.
 func (conn *Connection) Print(w io.Writer) {
-	printer := func(path dbus.ObjectPath, dict dbusInterfaces) bool {
+	printer := func(path dbus.ObjectPath, dict Object) bool {
 		return printObject(w, path, dict)
 	}
 	conn.iterObjects(printer)
 }
 
-func printObject(w io.Writer, path dbus.ObjectPath, dict dbusInterfaces) bool {
+func printObject(w io.Writer, path dbus.ObjectPath, dict Object) bool {
 	fmt.Fprintln(w, path)
-	for iface, props := range *dict {
+	for iface, props := range dict {
 		printProperties(w, iface, props)
 	}
 	fmt.Fprintln(w)
@@ -96,8 +99,6 @@ type BaseObject interface {
 	Name() string
 	Print(io.Writer)
 }
-
-type properties map[string]dbus.Variant
 
 type blob struct {
 	conn       *Connection
@@ -172,8 +173,8 @@ type predicate func(*blob) bool
 // If returns an error if zero or more than one is found.
 func (conn *Connection) findObject(iface string, matching predicate) (*blob, error) {
 	var found []*blob
-	conn.iterObjects(func(path dbus.ObjectPath, dict dbusInterfaces) bool {
-		props := (*dict)[iface]
+	conn.iterObjects(func(path dbus.ObjectPath, dict Object) bool {
+		props := dict[iface]
 		if props == nil {
 			return false
 		}
