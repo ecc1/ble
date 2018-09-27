@@ -166,7 +166,20 @@ func printProperties(w io.Writer, iface string, props Properties) {
 		indent += indent
 	}
 	for key, val := range props {
-		fmt.Fprintf(w, "%s%s %s\n", indent, key, val.String())
+		s := val.String()
+		switch key {
+		case "UUID":
+			u, ok := val.Value().(string)
+			if ok {
+				s = ShortUUID(u)
+			}
+		case "UUIDs":
+			uuids, ok := val.Value().([]string)
+			if ok {
+				s = UUIDs(uuids).String()
+			}
+		}
+		fmt.Fprintf(w, "%s%s %s\n", indent, key, s)
 	}
 }
 

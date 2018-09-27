@@ -89,3 +89,21 @@ func ShortUUID(u string) string {
 	}
 	panic("unreachable")
 }
+
+// UUIDs represents a list of UUIDs.
+type UUIDs []string
+
+// The String method allows a list of UUIDs to be printed in short form.
+func (uuids UUIDs) String() string {
+	var b strings.Builder
+	// nolint
+	b.WriteByte('[')
+	for i, u := range uuids {
+		if i != 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(ShortUUID(u))
+	}
+	b.WriteByte(']')
+	return b.String()
+}

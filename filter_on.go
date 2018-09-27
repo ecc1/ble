@@ -9,7 +9,7 @@ import (
 )
 
 func (adapter *blob) SetDiscoveryFilter(uuids ...string) error {
-	log.Printf("%s: setting discovery filter %v", adapter.Name(), uuids)
+	log.Printf("%s: setting discovery filter %v", adapter.Name(), UUIDs(uuids))
 	return adapter.call(
 		"SetDiscoveryFilter",
 		Properties{
