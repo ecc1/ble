@@ -40,7 +40,7 @@ func uuidsInclude(advertised []string, uuids []string) bool {
 			log.Printf("invalid UUID %s", u)
 			return false
 		}
-		if !stringsContain(advertised, u) {
+		if !stringsContain(advertised, LongUUID(u)) {
 			return false
 		}
 	}
