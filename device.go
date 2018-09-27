@@ -40,7 +40,7 @@ func uuidsInclude(advertised []string, uuids []string) bool {
 			log.Printf("invalid UUID %s", u)
 			return false
 		}
-		if !stringArrayContains(advertised, u) {
+		if !stringsContain(advertised, u) {
 			return false
 		}
 	}
@@ -81,7 +81,7 @@ func (device *blob) Pair() error {
 	return device.call("Pair")
 }
 
-func stringArrayContains(a []string, str string) bool {
+func stringsContain(a []string, str string) bool {
 	for _, s := range a {
 		if s == str {
 			return true
