@@ -45,7 +45,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = conn.removeMatch(rule) }()
+	defer conn.removeMatch(rule)
 	err = adapter.SetDiscoveryFilter(uuids...)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (adapter *blob) Discover(timeout time.Duration, uuids ...string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = adapter.StopDiscovery() }()
+	defer adapter.StopDiscovery()
 	var t <-chan time.Time
 	if timeout != 0 {
 		t = time.After(timeout)
@@ -86,20 +86,24 @@ func (adapter *blob) discoveryComplete(s *dbus.Signal, uuids []string) bool {
 		log.Printf("%s: skipping signal %s with no device interface", adapter.Name(), s.Name)
 		return false
 	}
+	addr, ok := props["Address"].Value().(string)
+	if !ok {
+		addr = "[unknown address]"
+	}
 	name, ok := props["Name"].Value().(string)
 	if !ok {
-		name = "[unknown]"
+		name = "[unknown name]"
 	}
 	services, ok := props["UUIDs"].Value().([]string)
 	if !ok {
 		services = nil
 	}
-	if !uuidsInclude(services, uuids) {
-		log.Printf("%s: skipping signal for device %s without matching UUIDs", adapter.Name(), name)
+	if !UUIDsInclude(services, uuids) {
+		log.Printf("%s: skipping signal for %s (%s) without matching UUIDs", adapter.Name(), addr, name)
 		log.Printf("%s: wanted %v, got %v", adapter.Name(), uuids, services)
 		return false
 	}
-	log.Printf("%s: discovered %s", adapter.Name(), name)
+	log.Printf("%s: discovered %s (%s)", adapter.Name(), addr, name)
 	return true
 }
 
@@ -116,9 +120,9 @@ func interfaceProperties(s *dbus.Signal) Properties {
 	return dict[deviceInterface]
 }
 
-// Discover initiates discovery for a LE peripheral with the given UUIDs.
+// Discover initiates discovery for a LE peripheral with the given address (if nonempty), advertising the given UUIDs.
 // It waits for at most the specified timeout, or indefinitely if timeout = 0.
-func (conn *Connection) Discover(timeout time.Duration, uuids ...string) (Device, error) {
+func (conn *Connection) Discover(timeout time.Duration, address Address, uuids ...string) (Device, error) {
 	adapter, err := conn.GetAdapter()
 	if err != nil {
 		return nil, err
@@ -131,5 +135,8 @@ func (conn *Connection) Discover(timeout time.Duration, uuids ...string) (Device
 	if err != nil {
 		return nil, err
 	}
-	return conn.GetDevice(uuids...)
+	if address != "" {
+		return conn.GetDeviceByAddress(address)
+	}
+	return conn.GetDeviceByUUID(uuids...)
 }

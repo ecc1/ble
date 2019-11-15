@@ -1,7 +1,10 @@
 package ble
 
 import (
+	"fmt"
 	"log"
+	"net"
+	"strings"
 )
 
 const (
@@ -14,6 +17,8 @@ const (
 type Device interface {
 	BaseObject
 
+	Address() Address
+	AddressType() string
 	UUIDs() []string
 	Connected() bool
 	Paired() bool
@@ -27,14 +32,48 @@ func (conn *Connection) matchDevice(matching predicate) (Device, error) {
 	return conn.findObject(deviceInterface, matching)
 }
 
-// GetDevice finds a Device in the object cache matching the given UUIDs.
-func (conn *Connection) GetDevice(uuids ...string) (Device, error) {
-	return conn.matchDevice(func(device *blob) bool {
-		return uuidsInclude(device.UUIDs(), uuids)
-	})
+// ValidAddress checks whether addr is a valid MAC address.
+func ValidAddress(addr string) bool {
+	_, err := net.ParseMAC(addr)
+	return err == nil
 }
 
-func uuidsInclude(advertised []string, uuids []string) bool {
+// GetDeviceByAddress finds a Device in the object cache with the given address.
+func (conn *Connection) GetDeviceByAddress(address Address) (Device, error) {
+	addr := Address(strings.ToUpper(string(address)))
+	device, err := conn.matchDevice(func(device *blob) bool {
+		return device.Address() == addr
+	})
+	if err != nil {
+		err = fmt.Errorf("%v with address %s", err, addr)
+	}
+	return device, err
+}
+
+// GetDeviceByName finds a Device in the object cache with the given name.
+func (conn *Connection) GetDeviceByName(name string) (Device, error) {
+	device, err := conn.matchDevice(func(device *blob) bool {
+		return device.Name() == name
+	})
+	if err != nil {
+		err = fmt.Errorf("%v with name %q", err, name)
+	}
+	return device, err
+}
+
+// GetDeviceByUUID finds a Device in the object cache matching the given UUIDs.
+func (conn *Connection) GetDeviceByUUID(uuids ...string) (Device, error) {
+	device, err := conn.matchDevice(func(device *blob) bool {
+		return UUIDsInclude(device.UUIDs(), uuids)
+	})
+	if err != nil {
+		err = fmt.Errorf("%v with UUIDs %v", err, uuids)
+	}
+	return device, err
+}
+
+// UUIDsInclude tests whether the advertised UUIDs contain all of the ones in uuids.
+func UUIDsInclude(advertised []string, uuids []string) bool {
 	for _, u := range uuids {
 		if !ValidUUID(u) {
 			log.Printf("invalid UUID %s", u)
@@ -47,11 +86,12 @@ func uuidsInclude(advertised []string, uuids []string) bool {
 	return true
 }
 
-// GetDeviceByName finds a Device in the object cache with the given name.
-func (conn *Connection) GetDeviceByName(name string) (Device, error) {
-	return conn.matchDevice(func(device *blob) bool {
-		return device.Name() == name
-	})
+func (device *blob) Address() Address {
+	return Address(device.properties["Address"].Value().(string))
+}
+
+func (device *blob) AddressType() string {
+	return device.properties["AddressType"].Value().(string)
 }
 
 func (device *blob) UUIDs() []string {

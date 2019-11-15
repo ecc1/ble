@@ -17,6 +17,8 @@ import (
 
 const (
 	objectManager = "org.freedesktop.DBus.ObjectManager"
+
+	callTimeout = 5 * time.Second
 )
 
 // Use type aliases for these subtypes so the reflection
@@ -36,6 +38,9 @@ type (
 		bus     *dbus.Conn
 		objects map[dbus.ObjectPath]Object
 	}
+
+	// Address represents a MAC address.
+	Address string
 )
 
 // Open opens a connection to the system D-Bus
@@ -55,7 +60,7 @@ func Open() (*Connection, error) {
 
 // Close closes the D-Bus connection.
 func (conn *Connection) Close() {
-	_ = conn.bus.Close()
+	conn.bus.Close()
 }
 
 // Update gets all objects and properties.
@@ -137,7 +142,6 @@ func (obj *blob) Name() string {
 }
 
 func (obj *blob) callv(method string, args ...interface{}) *dbus.Call {
-	const callTimeout = 5 * time.Second
 	c := obj.object.Go(dot(obj.iface, method), 0, nil, args...)
 	if c.Err == nil {
 		select {
@@ -211,9 +215,9 @@ func (conn *Connection) findObject(iface string, matching predicate) (*blob, err
 	case 1:
 		return found[0], nil
 	case 0:
-		return nil, fmt.Errorf("interface %s not found", iface)
+		return nil, fmt.Errorf("cannot find %s", iface)
 	default:
-		return nil, fmt.Errorf("found %d instances of interface %s", len(found), iface)
+		return nil, fmt.Errorf("found %d instances of %s", len(found), iface)
 	}
 }
 

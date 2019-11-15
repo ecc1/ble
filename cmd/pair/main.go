@@ -15,7 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	device, err := conn.Discover(0, os.Args[1])
+	device, err := conn.Discover(0, "", os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}

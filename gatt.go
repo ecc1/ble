@@ -1,5 +1,9 @@
 package ble
 
+import (
+	"fmt"
+)
+
 const (
 	// GATTMTU is the maximum size of a write to a GATT characteristic.
 	GATTMTU = 20
@@ -10,9 +14,13 @@ const (
 )
 
 func (conn *Connection) findGattObject(iface string, uuid string) (*blob, error) {
-	return conn.findObject(iface, func(desc *blob) bool {
+	handle, err := conn.findObject(iface, func(desc *blob) bool {
 		return desc.UUID() == uuid
 	})
+	if err != nil {
+		err = fmt.Errorf("%v with UUID %s", err, uuid)
+	}
+	return handle, err
 }
 
 // GattHandle is the interface satisfied by GATT handles.
