@@ -96,7 +96,6 @@ type UUIDs []string
 // The String method allows a list of UUIDs to be printed in short form.
 func (uuids UUIDs) String() string {
 	var b strings.Builder
-	// nolint
 	b.WriteByte('[')
 	for i, u := range uuids {
 		if i != 0 {
