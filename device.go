@@ -45,7 +45,7 @@ func (conn *Connection) GetDeviceByAddress(address Address) (Device, error) {
 		return device.Address() == addr
 	})
 	if err != nil {
-		err = fmt.Errorf("%v with address %s", err, addr)
+		err = fmt.Errorf("%w with address %s", err, addr)
 	}
 	return device, err
 }
@@ -56,7 +56,7 @@ func (conn *Connection) GetDeviceByName(name string) (Device, error) {
 		return device.Name() == name
 	})
 	if err != nil {
-		err = fmt.Errorf("%v with name %q", err, name)
+		err = fmt.Errorf("%w with name %q", err, name)
 	}
 	return device, err
 }
@@ -67,7 +67,7 @@ func (conn *Connection) GetDeviceByUUID(uuids ...string) (Device, error) {
 		return UUIDsInclude(device.UUIDs(), uuids)
 	})
 	if err != nil {
-		err = fmt.Errorf("%v with UUIDs %v", err, uuids)
+		err = fmt.Errorf("%w with UUIDs %v", err, uuids)
 	}
 	return device, err
 }

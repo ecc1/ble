@@ -18,7 +18,7 @@ func (conn *Connection) findGattObject(iface string, uuid string) (*blob, error)
 		return desc.UUID() == uuid
 	})
 	if err != nil {
-		err = fmt.Errorf("%v with UUID %s", err, uuid)
+		err = fmt.Errorf("%w with UUID %s", err, uuid)
 	}
 	return handle, err
 }
