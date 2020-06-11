@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/godbus/dbus/v5"
+	"github.com/godbus/dbus"
 )
 
 func (conn *Connection) addMatch(rule string) error {

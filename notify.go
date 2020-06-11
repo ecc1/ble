@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/godbus/dbus/v5"
+	"github.com/godbus/dbus"
 )
 
 var (
